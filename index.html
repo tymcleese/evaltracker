@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Eval Tracker" />
+<meta name="theme-color" content="#ffffff" />
+<title>Eval Tracker</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --border: #ececf0;
+    --border-strong: #dcdce2;
+    --text: #111113;
+    --muted: #6b7280;
+    --muted-soft: #9ca3af;
+    --green: #10b981;
+    --green-strong: #059669;
+    --green-bg: #ecfdf5;
+    --red: #ef4444;
+    --red-strong: #dc2626;
+    --red-bg: #fef2f2;
+    --yellow: #f59e0b;
+    --yellow-bg: #fffbeb;
+    --blue: #2563eb;
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+    --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.03);
+    --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, 0.12), 0 4px 12px -4px rgba(16, 24, 40, 0.05);
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, "Google Sans", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    overscroll-behavior-y: contain;
+  }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; touch-action: manipulation; }
+  input { font-family: inherit; color: inherit; }
+
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.015em; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 16px; }
+
+  .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .muted { color: var(--muted); }
+  .positive { color: var(--green-strong); }
+  .negative { color: var(--red-strong); }
+
+  /* ───────── LOGIN ───────── */
+  .login-screen {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+    background: var(--bg);
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 36px 28px 28px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+
+  .login-title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+  }
+
+  .login-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 28px;
+  }
+
+  .pin-dots {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin: 0 0 28px;
+    height: 16px;
+  }
+
+  .dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid var(--border-strong);
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+
+  .dot.filled {
+    background: var(--text);
+    border-color: var(--text);
+    transform: scale(1.08);
+  }
+
+  .pin-dots.shake { animation: shake 0.42s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-6px); }
+    40%,80% { transform: translateX(6px); }
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .key {
+    height: 58px;
+    background: #f4f4f5;
+    border-radius: 14px;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    transition: background 0.12s, transform 0.05s;
+    user-select: none;
+  }
+
+  .key:hover { background: #ebebef; }
+  .key:active { background: #e3e3e8; transform: scale(0.97); }
+  .key.key-action {
+    background: transparent;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .key.key-action:hover { background: #f0f0f2; color: var(--text); }
+  .key.key-enter {
+    background: var(--text);
+    color: white;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .key.key-enter:hover { background: #000; }
+  .key.key-enter:active { background: #000; transform: scale(0.97); }
+
+  .login-error {
+    min-height: 18px;
+    color: var(--red-strong);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .login-hint {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--muted-soft);
+  }
+
+  /* ───────── DASHBOARD ───────── */
+  .app {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: calc(16px + env(safe-area-inset-top)) 20px calc(60px + env(safe-area-inset-bottom));
+  }
+
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0 24px;
+  }
+
+  .app-header h1 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+    flex-shrink: 0;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  body.blown .status-dot {
+    background: var(--red);
+    animation: dotPulseR 1.4s ease-in-out infinite;
+  }
+  body.passed .status-dot {
+    background: var(--green);
+    animation: dotPulseG 1.4s ease-in-out infinite;
+  }
+  @keyframes dotPulseR {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22); }
+    50%      { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.08); }
+  }
+  @keyframes dotPulseG {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25); }
+    50%      { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0.10); }
+  }
+
+  body.blown  { animation: bgAlarm 2s ease-in-out infinite; }
+  body.passed { animation: bgCelebrate 2.2s ease-in-out infinite; }
+  @keyframes bgAlarm {
+    0%, 100% { background: var(--bg); }
+    50%      { background: #fde2e2; }
+  }
+  @keyframes bgCelebrate {
+    0%, 100% { background: var(--bg); }
+    50%      { background: #d5f5e3; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.blown  { animation: none; background: #fde2e2; }
+    body.passed { animation: none; background: #d5f5e3; }
+    body.blown .status-dot,
+    body.passed .status-dot { animation: none; }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .pin-badge {
+    font-size: 12px;
+    color: var(--muted);
+    background: #eeeef1;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ghost-btn {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .ghost-btn:hover { background: #eeeef1; color: var(--text); }
+
+  /* Status banner */
+  .status-banner {
+    padding: 22px 24px;
+    border-radius: var(--radius);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--green);
+    box-shadow: 0 0 0 4px var(--green-bg);
+  }
+  .status-banner.passed .status-indicator { background: var(--green); box-shadow: 0 0 0 4px var(--green-bg); }
+  .status-banner.blown .status-indicator { background: var(--red); box-shadow: 0 0 0 4px var(--red-bg); }
+  .status-banner.warning .status-indicator { background: var(--yellow); box-shadow: 0 0 0 4px var(--yellow-bg); }
+
+  .status-text { flex: 1; min-width: 0; }
+  .status-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .status-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .status-banner.passed .status-title { color: var(--green-strong); }
+  .status-banner.blown .status-title { color: var(--red-strong); }
+
+  /* Hero */
+  .hero {
+    padding: 28px 8px 24px;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .hero-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .hero-pnl {
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--text);
+  }
+  .hero-pnl.positive { color: var(--green-strong); }
+  .hero-pnl.negative { color: var(--red-strong); }
+  .hero-balance {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .hero-divider {
+    height: 18px;
+  }
+
+  /* Metrics */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .metric-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .metric-value {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 14px;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    gap: 12px;
+  }
+
+  .card-header h2 { margin: 0; font-size: 15px; font-weight: 600; }
+
+  .card-header .muted {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Progress bars */
+  .progress-bar {
+    height: 8px;
+    background: #eeeef1;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--green);
+    transition: width 0.4s ease, background 0.3s ease;
+  }
+  .progress-fill.negative {
+    margin-left: auto;
+    background: var(--red);
+  }
+
+  .progress-fill.buffer-green { background: var(--green); }
+  .progress-fill.buffer-yellow { background: var(--yellow); }
+  .progress-fill.buffer-red { background: var(--red); }
+
+  .progress-sub {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Trade form */
+  .trade-form {
+    display: grid;
+    grid-template-columns: 140px 1fr auto;
+    gap: 10px;
+  }
+
+  .trade-form input {
+    height: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: #fafafb;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.12s, background 0.12s;
+    outline: none;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .trade-form input:focus {
+    border-color: var(--blue);
+    background: var(--card);
+  }
+
+  .trade-form button {
+    height: 46px;
+    padding: 0 20px;
+    border-radius: 10px;
+    background: var(--text);
+    color: white;
+    font-weight: 500;
+    font-size: 15px;
+    transition: opacity 0.12s, transform 0.05s;
+  }
+
+  .trade-form button:hover { opacity: 0.88; }
+  .trade-form button:active { transform: scale(0.98); }
+  .trade-form button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Trade list */
+  .trade-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .trade-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    padding: 12px 0;
+    gap: 14px;
+    border-top: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trade-row:first-child { border-top: none; }
+
+  .trade-date {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .trade-balance {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .trade-pnl {
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .trade-delete {
+    color: var(--muted-soft);
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: color 0.12s, background 0.12s;
+    line-height: 1;
+  }
+  .trade-delete:hover, .trade-delete:active { color: var(--red); background: var(--red-bg); }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Rules */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 24px;
+    margin: 0;
+  }
+
+  .rule-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .rule-row:first-child, .rule-row:nth-child(2) { border-top: none; }
+
+  .rule-label { color: var(--muted); }
+  .rule-value { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* Consistency section */
+  .consistency-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0 0;
+  }
+
+  .consistency-stat {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .consistency-stat strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .consistency-pill {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--green-bg);
+    color: var(--green-strong);
+  }
+  .consistency-pill.warn { background: var(--yellow-bg); color: #92400e; }
+
+  /* Calendar */
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+  }
+  .cal-title-wrap { text-align: center; flex: 1; min-width: 0; }
+  .cal-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .cal-month-total {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .cal-month-total.positive { color: var(--green-strong); }
+  .cal-month-total.negative { color: var(--red-strong); }
+  .cal-nav-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 20px;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+  }
+  .cal-nav-btn:hover { background: #eeeef1; color: var(--text); }
+  .cal-nav-btn:active { background: #e3e3e8; }
+
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .cal-weekday {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: center;
+    padding: 6px 0;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .cal-day {
+    aspect-ratio: 1;
+    background: #f5f5f7;
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-width: 0;
+    border: 1px solid transparent;
+  }
+  .cal-day.empty {
+    background: transparent;
+  }
+  .cal-day.profit {
+    background: var(--green-bg);
+    border-color: #bbf0da;
+  }
+  .cal-day.loss {
+    background: var(--red-bg);
+    border-color: #fecaca;
+  }
+  .cal-day.today {
+    box-shadow: 0 0 0 2px var(--text) inset;
+  }
+
+  .cal-day-num {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+    line-height: 1;
+  }
+  .cal-day.profit .cal-day-num,
+  .cal-day.loss .cal-day-num {
+    color: var(--text);
+    opacity: 0.55;
+  }
+
+  .cal-day-pnl {
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    margin-top: auto;
+    text-align: center;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
+  .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
+
+  /* Utility */
+  .danger-text { color: var(--red-strong); font-weight: 500; }
+  .btn-danger {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .btn-danger:hover { color: var(--red); background: var(--red-bg); }
+
+  @media (max-width: 520px) {
+    .app { padding-left: 14px; padding-right: 14px; }
+    .app-header { padding: 4px 0 20px; }
+    .app-header h1 { font-size: 18px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric-card { padding: 16px 14px; }
+    .metric-value { font-size: 20px; }
+    .hero { padding: 20px 8px 20px; }
+    .hero-pnl { font-size: 52px; }
+    .hero-balance { font-size: 24px; }
+    .hero-divider { height: 14px; }
+    .card { padding: 18px 16px; }
+    .trade-form { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .trade-form button { grid-column: 1 / -1; }
+    .rules-grid { grid-template-columns: 1fr; }
+    .rule-row:nth-child(2) { border-top: 1px solid var(--border); }
+    .trade-row { grid-template-columns: 1fr auto auto; gap: 10px; padding: 14px 0; }
+    .trade-row .trade-balance { display: none; }
+    .login-card { padding: 32px 22px 24px; border-radius: 18px; }
+    .key { height: 56px; font-size: 21px; }
+    .consistency-wrap { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .cal-grid, .cal-weekdays { gap: 4px; }
+    .cal-day { padding: 4px; border-radius: 6px; }
+    .cal-day-num { font-size: 10px; }
+    .cal-day-pnl { font-size: 10px; }
+  }
+
+  @media (max-width: 380px) {
+    .keypad { gap: 8px; }
+    .key { height: 52px; font-size: 20px; }
+    .metric-value { font-size: 18px; }
+    .cal-day-pnl { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-screen">
+  <div class="login-card">
+    <h1 class="login-title">Eval Tracker</h1>
+    <p class="login-sub" id="login-sub">Enter your PIN</p>
+    <div class="pin-dots" id="pin-dots">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+    <div class="keypad" id="keypad">
+      <button class="key" data-key="1">1</button>
+      <button class="key" data-key="2">2</button>
+      <button class="key" data-key="3">3</button>
+      <button class="key" data-key="4">4</button>
+      <button class="key" data-key="5">5</button>
+      <button class="key" data-key="6">6</button>
+      <button class="key" data-key="7">7</button>
+      <button class="key" data-key="8">8</button>
+      <button class="key" data-key="9">9</button>
+      <button class="key key-action" data-key="del">Delete</button>
+      <button class="key" data-key="0">0</button>
+      <button class="key key-enter" data-key="enter">Enter</button>
+    </div>
+    <p class="login-error" id="login-error">&nbsp;</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="app" hidden>
+  <header class="app-header">
+    <h1><span class="status-dot" id="status-dot" aria-hidden="true"></span>Eval Tracker</h1>
+    <div class="header-actions">
+      <span class="pin-badge" id="pin-badge">PIN ••••</span>
+      <button class="ghost-btn" id="logout-btn">Lock</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="hero-label">Total P&amp;L</div>
+      <div class="hero-pnl mono" id="m-pnl">—</div>
+      <div class="hero-divider"></div>
+      <div class="hero-label">Current Balance</div>
+      <div class="hero-balance mono" id="m-balance">—</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Progress to Target</h2>
+        <span class="muted mono" id="progress-ratio"></span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <p class="progress-sub">
+        <span id="progress-pct"></span>
+        <span id="progress-remaining"></span>
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="calendar-header">
+        <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">‹</button>
+        <div class="cal-title-wrap">
+          <div class="cal-title" id="cal-title">—</div>
+          <div class="cal-month-total" id="cal-total">—</div>
+        </div>
+        <button class="cal-nav-btn" id="cal-next" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <div class="cal-weekday">Sun</div>
+        <div class="cal-weekday">Mon</div>
+        <div class="cal-weekday">Tue</div>
+        <div class="cal-weekday">Wed</div>
+        <div class="cal-weekday">Thu</div>
+        <div class="cal-weekday">Fri</div>
+        <div class="cal-weekday">Sat</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Peak Balance</div>
+        <div class="metric-value mono positive" id="m-peak">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Drawdown Floor</div>
+        <div class="metric-value mono negative" id="m-floor">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Drawdown</h2>
+        <span class="muted mono" id="buffer-text"></span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill buffer-green" id="buffer-fill" style="width: 0%"></div>
+      </div>
+      <p class="progress-sub">
+        <span id="buffer-pct"></span>
+        <span id="buffer-sub"></span>
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Consistency (40% Rule)</h2>
+        <span class="consistency-pill" id="consistency-pill">OK</span>
+      </div>
+      <div class="consistency-wrap">
+        <div class="consistency-stat">
+          Best day <strong id="best-day-amt">—</strong> · <span id="best-day-date" class="muted">—</span>
+        </div>
+        <div class="consistency-stat">
+          <strong id="best-day-pct">—</strong> of total profits
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Log a Trading Day</h2>
+      </div>
+      <form class="trade-form" id="trade-form">
+        <input type="date" id="trade-date" required />
+        <input type="number" id="trade-pnl" placeholder="P&L ($)" step="0.01" inputmode="decimal" required />
+        <button type="submit">Add</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Trade History</h2>
+        <span class="muted" id="trade-count">0 days</span>
+      </div>
+      <div class="trade-list" id="trade-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Tradify Select 50k Eval</h2>
+      </div>
+      <div class="rules-grid">
+        <div class="rule-row"><span class="rule-label">Starting balance</span><span class="rule-value">$50,000</span></div>
+        <div class="rule-row"><span class="rule-label">Profit target</span><span class="rule-value">$2,500</span></div>
+        <div class="rule-row"><span class="rule-label">Trailing drawdown</span><span class="rule-value">$2,000</span></div>
+        <div class="rule-row"><span class="rule-label">Daily loss limit</span><span class="rule-value">None</span></div>
+        <div class="rule-row"><span class="rule-label">Consistency rule</span><span class="rule-value">40%</span></div>
+        <div class="rule-row"><span class="rule-label">Max contracts</span><span class="rule-value">4 mini / 40 micro</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">Reset this account</div>
+        <div class="muted" style="font-size:13px;">Clears all trades for this PIN.</div>
+      </div>
+      <button class="btn-danger" id="reset-btn">Reset</button>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const STORAGE_PREFIX = "eval_tracker_v1_";
+  const VALID_PINS = ["1111", "2222", "3333"];
+  const SEEDED_PIN = "1111";
+  const STARTING_BALANCE = 50000;
+  const PROFIT_TARGET = 2500;
+  const DRAWDOWN_AMOUNT = 2000;
+  const CONSISTENCY_LIMIT = 0.40;
+  const DRAWDOWN_LOCK = STARTING_BALANCE; // trailing floor locks at starting balance
+
+  // Starter trade data (seeded for the first PIN only)
+  const SEED_TRADES = [
+    { date: "2026-02-17", pnl: 387.90 },
+    { date: "2026-02-20", pnl: 194.30 },
+    { date: "2026-02-23", pnl: 154.00 },
+    { date: "2026-02-27", pnl: 159.00 },
+    { date: "2026-03-05", pnl: 179.85 },
+    { date: "2026-03-10", pnl: 17.40 },
+    { date: "2026-03-17", pnl: -797.50 },
+    { date: "2026-03-20", pnl: 370.45 },
+    { date: "2026-03-23", pnl: -106.00 },
+    { date: "2026-04-07", pnl: -172.50 },
+    { date: "2026-04-13", pnl: -400.00 },
+    { date: "2026-04-15", pnl: 466.00 },
+    { date: "2026-04-16", pnl: 912.00 },
+    { date: "2026-04-20", pnl: -544.00 },
+    { date: "2026-04-23", pnl: -473.60 },
+  ];
+
+  // ───── State ─────
+  let currentPin = null;
+  let pinBuffer = "";
+  let calMonth = (() => { const d = new Date(); d.setDate(1); return d; })();
+
+  // ───── Storage helpers ─────
+  function storageKey(pin) { return STORAGE_PREFIX + pin; }
+
+  function getAllPins() {
+    return Object.keys(localStorage)
+      .filter(k => k.startsWith(STORAGE_PREFIX))
+      .map(k => k.slice(STORAGE_PREFIX.length));
+  }
+
+  function loadData(pin) {
+    const raw = localStorage.getItem(storageKey(pin));
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  function saveData(pin, data) {
+    localStorage.setItem(storageKey(pin), JSON.stringify(data));
+  }
+
+  function createAccount(pin) {
+    const data = {
+      trades: pin === SEEDED_PIN ? [...SEED_TRADES] : [],
+      createdAt: new Date().toISOString(),
+    };
+    saveData(pin, data);
+    return data;
+  }
+
+  // ───── Domain logic ─────
+  function sortedTrades(trades) {
+    return [...trades].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function computeState(trades) {
+    const sorted = sortedTrades(trades);
+    let balance = STARTING_BALANCE;
+    let peak = STARTING_BALANCE;
+    let floorHitEver = false;
+    let everPassed = false;
+
+    const rows = sorted.map(t => {
+      balance += t.pnl;
+      if (balance > peak) peak = balance;
+      const floorNow = Math.min(peak - DRAWDOWN_AMOUNT, DRAWDOWN_LOCK);
+      if (balance <= floorNow) floorHitEver = true;
+      if (balance - STARTING_BALANCE >= PROFIT_TARGET) everPassed = true;
+      return { ...t, balanceAfter: balance, peakAt: peak, floorAt: floorNow };
+    });
+
+    const floor = Math.min(peak - DRAWDOWN_AMOUNT, DRAWDOWN_LOCK);
+    const totalPnL = balance - STARTING_BALANCE;
+    const buffer = balance - floor;
+    const bestDay = sorted.reduce(
+      (acc, t) => (t.pnl > (acc?.pnl ?? -Infinity) ? t : acc),
+      null
+    );
+    const totalProfits = sorted.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0);
+    const bestDayRatio = totalProfits > 0 && bestDay ? bestDay.pnl / totalProfits : 0;
+
+    let status = "active";
+    if (floorHitEver) status = "blown";
+    else if (everPassed) status = "passed";
+
+    return {
+      rows,
+      balance,
+      peak,
+      floor,
+      totalPnL,
+      buffer,
+      status,
+      bestDay,
+      bestDayRatio,
+      totalProfits,
+    };
+  }
+
+  // ───── Formatting ─────
+  const fmtMoney = (n, signed = false) => {
+    const sign = n > 0 && signed ? "+" : n < 0 ? "-" : signed && n === 0 ? "" : "";
+    const abs = Math.abs(n);
+    const str = abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${sign}$${str}`.replace("+$-", "-$");
+  };
+
+  const fmtPct = (x, digits = 1) =>
+    `${(x * 100).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
+
+  function fmtDate(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+
+  function fmtDateLong(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  }
+
+  function todayIso() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  // ───── Login flow ─────
+  const loginEl = document.getElementById("login");
+  const dashEl = document.getElementById("dashboard");
+  const dotsEl = document.getElementById("pin-dots");
+  const loginSub = document.getElementById("login-sub");
+  const loginError = document.getElementById("login-error");
+
+  function renderDots() {
+    const dots = dotsEl.querySelectorAll(".dot");
+    dots.forEach((d, i) => d.classList.toggle("filled", i < pinBuffer.length));
+  }
+
+  function shakeDots() {
+    dotsEl.classList.remove("shake");
+    void dotsEl.offsetWidth;
+    dotsEl.classList.add("shake");
+  }
+
+  function resetPinInput(msg = "") {
+    pinBuffer = "";
+    renderDots();
+    loginError.textContent = msg || "\u00A0";
+  }
+
+  function handleKey(k) {
+    loginError.textContent = "\u00A0";
+    if (k === "del") {
+      pinBuffer = pinBuffer.slice(0, -1);
+      renderDots();
+      return;
+    }
+    if (k === "enter") {
+      if (pinBuffer.length === 4) attemptLogin(pinBuffer);
+      else { shakeDots(); loginError.textContent = "Enter 4 digits"; }
+      return;
+    }
+    if (pinBuffer.length >= 4) return;
+    pinBuffer += k;
+    renderDots();
+  }
+
+  function attemptLogin(pin) {
+    if (!VALID_PINS.includes(pin)) {
+      shakeDots();
+      resetPinInput("Invalid PIN");
+      return;
+    }
+    if (!loadData(pin)) createAccount(pin);
+    currentPin = pin;
+    pinBuffer = "";
+    showDashboard();
+  }
+
+  document.getElementById("keypad").addEventListener("click", e => {
+    const btn = e.target.closest("[data-key]");
+    if (!btn) return;
+    handleKey(btn.dataset.key);
+  });
+
+  document.addEventListener("keydown", e => {
+    if (!loginEl.hidden === false && dashEl.hidden === false) return;
+    if (dashEl.hidden) {
+      if (/^[0-9]$/.test(e.key)) { e.preventDefault(); handleKey(e.key); }
+      else if (e.key === "Backspace") { e.preventDefault(); handleKey("del"); }
+      else if (e.key === "Enter") { e.preventDefault(); handleKey("enter"); }
+    }
+  });
+
+  // ───── Dashboard render ─────
+  function showDashboard() {
+    loginEl.hidden = true;
+    dashEl.hidden = false;
+    document.getElementById("pin-badge").textContent = `PIN ••••`;
+    document.getElementById("trade-date").value = todayIso();
+    render();
+  }
+
+  function showLogin() {
+    dashEl.hidden = true;
+    loginEl.hidden = false;
+    document.body.classList.remove("blown", "passed");
+    currentPin = null;
+    resetPinInput();
+  }
+
+  function render() {
+    if (!currentPin) return;
+    const data = loadData(currentPin) || { trades: [] };
+    const s = computeState(data.trades);
+
+    // Status (blown → red alarm, passed → green celebrate)
+    document.body.classList.toggle("blown", s.status === "blown");
+    document.body.classList.toggle("passed", s.status === "passed");
+
+    // Metrics
+    document.getElementById("m-balance").textContent = fmtMoney(s.balance);
+
+    const pnlEl = document.getElementById("m-pnl");
+    pnlEl.textContent = fmtMoney(Math.abs(s.totalPnL));
+    pnlEl.classList.toggle("positive", s.totalPnL > 0);
+    pnlEl.classList.toggle("negative", s.totalPnL < 0);
+
+    document.getElementById("m-peak").textContent = fmtMoney(s.peak);
+    document.getElementById("m-floor").textContent = fmtMoney(s.floor);
+
+    // Progress to target (positive: green, left→right / negative: red, right→left; full red = blown)
+    const progressRaw = s.totalPnL / PROFIT_TARGET;
+    const fillEl = document.getElementById("progress-fill");
+    fillEl.classList.remove("buffer-red", "buffer-yellow", "buffer-green");
+    if (s.totalPnL < 0) {
+      const dangerRatio = Math.min(1, Math.abs(s.totalPnL) / DRAWDOWN_AMOUNT);
+      fillEl.style.width = `${(dangerRatio * 100).toFixed(1)}%`;
+      fillEl.classList.add("negative");
+    } else {
+      const fillPct = Math.min(1, progressRaw);
+      fillEl.style.width = `${(fillPct * 100).toFixed(1)}%`;
+      fillEl.classList.remove("negative");
+    }
+    document.getElementById("progress-ratio").textContent =
+      `${fmtMoney(s.totalPnL, true)} / ${fmtMoney(PROFIT_TARGET)}`;
+    const pctEl = document.getElementById("progress-pct");
+    pctEl.textContent = `${fmtPct(progressRaw)} complete`;
+    pctEl.classList.toggle("negative", s.totalPnL < 0);
+    pctEl.classList.toggle("positive", s.totalPnL > 0);
+    const remaining = PROFIT_TARGET - s.totalPnL;
+    document.getElementById("progress-remaining").textContent =
+      remaining > 0 ? `${fmtMoney(remaining)} to go` : "Target reached";
+
+    // Buffer meter
+    const bufferRatio = Math.max(0, Math.min(1, s.buffer / DRAWDOWN_AMOUNT));
+    const bufferFill = document.getElementById("buffer-fill");
+    bufferFill.style.width = `${(bufferRatio * 100).toFixed(1)}%`;
+    bufferFill.classList.remove("buffer-green", "buffer-yellow", "buffer-red");
+    if (bufferRatio < 0.25) bufferFill.classList.add("buffer-red");
+    else if (bufferRatio < 0.50) bufferFill.classList.add("buffer-yellow");
+    else bufferFill.classList.add("buffer-green");
+
+    document.getElementById("buffer-text").textContent =
+      `${fmtMoney(Math.max(0, s.buffer))} remaining`;
+    document.getElementById("buffer-pct").textContent =
+      s.buffer <= 0 ? "Breached" : `${fmtPct(bufferRatio)} of safety zone`;
+    document.getElementById("buffer-sub").textContent =
+      s.buffer > 0 ? `floor at ${fmtMoney(s.floor)}` : "";
+
+    // Consistency
+    const bestDayEl = document.getElementById("best-day-amt");
+    const bestDateEl = document.getElementById("best-day-date");
+    const bestPctEl = document.getElementById("best-day-pct");
+    const pill = document.getElementById("consistency-pill");
+
+    if (s.bestDay && s.totalProfits > 0) {
+      bestDayEl.textContent = fmtMoney(s.bestDay.pnl, true);
+      bestDateEl.textContent = fmtDateLong(s.bestDay.date);
+      bestPctEl.textContent = fmtPct(s.bestDayRatio);
+      if (s.bestDayRatio > CONSISTENCY_LIMIT) {
+        pill.textContent = `Over 40%`;
+        pill.classList.add("warn");
+      } else {
+        pill.textContent = "OK";
+        pill.classList.remove("warn");
+      }
+    } else {
+      bestDayEl.textContent = "—";
+      bestDateEl.textContent = "no winning days yet";
+      bestPctEl.textContent = "—";
+      pill.textContent = "OK";
+      pill.classList.remove("warn");
+    }
+
+    // Calendar
+    renderCalendar(data.trades);
+
+    // Trade history
+    const list = document.getElementById("trade-list");
+    const count = data.trades.length;
+    document.getElementById("trade-count").textContent = `${count} day${count === 1 ? "" : "s"}`;
+
+    if (count === 0) {
+      list.innerHTML = `<div class="empty-state">No trades logged yet. Add your first day above.</div>`;
+    } else {
+      const recent = [...s.rows].reverse();
+      list.innerHTML = recent.map(r => `
+        <div class="trade-row">
+          <div class="trade-date">${fmtDate(r.date)}</div>
+          <div class="trade-balance mono">${fmtMoney(r.balanceAfter)}</div>
+          <div class="trade-pnl mono ${r.pnl >= 0 ? "positive" : "negative"}">${fmtMoney(r.pnl, true)}</div>
+          <button class="trade-delete" data-del="${escapeAttr(r.date)}|${r.pnl}" title="Remove">×</button>
+        </div>
+      `).join("");
+    }
+  }
+
+  function escapeAttr(s) { return String(s).replace(/"/g, "&quot;"); }
+
+  function renderCalendar(trades) {
+    const y = calMonth.getFullYear();
+    const m = calMonth.getMonth();
+    const mm = String(m + 1).padStart(2, "0");
+    const firstWeekday = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    const byDate = {};
+    trades.forEach(t => { byDate[t.date] = (byDate[t.date] || 0) + t.pnl; });
+
+    let monthTotal = 0;
+    let tradingDays = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${y}-${mm}-${String(d).padStart(2, "0")}`;
+      if (byDate[iso] !== undefined) {
+        monthTotal += byDate[iso];
+        tradingDays++;
+      }
+    }
+
+    document.getElementById("cal-title").textContent =
+      calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    const totalEl = document.getElementById("cal-total");
+    totalEl.classList.remove("positive", "negative");
+    if (tradingDays === 0) {
+      totalEl.textContent = "No trades";
+    } else {
+      totalEl.textContent = `${fmtMoney(monthTotal, true)} · ${tradingDays} day${tradingDays === 1 ? "" : "s"}`;
+      if (monthTotal > 0) totalEl.classList.add("positive");
+      else if (monthTotal < 0) totalEl.classList.add("negative");
+    }
+
+    const grid = document.getElementById("cal-grid");
+    const today = todayIso();
+    const cells = [];
+
+    for (let i = 0; i < firstWeekday; i++) {
+      cells.push(`<div class="cal-day empty"></div>`);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${y}-${mm}-${String(d).padStart(2, "0")}`;
+      const pnl = byDate[iso];
+      const classes = ["cal-day"];
+      if (pnl > 0) classes.push("profit");
+      else if (pnl < 0) classes.push("loss");
+      if (iso === today) classes.push("today");
+
+      const pnlHtml = pnl !== undefined
+        ? `<div class="cal-day-pnl">${escapeHtml(fmtCalendarPnl(pnl))}</div>`
+        : "";
+
+      cells.push(`<div class="${classes.join(" ")}"><div class="cal-day-num">${d}</div>${pnlHtml}</div>`);
+    }
+
+    grid.innerHTML = cells.join("");
+  }
+
+  function fmtCalendarPnl(n) {
+    const sign = n >= 0 ? "+" : "-";
+    const abs = Math.abs(n);
+    if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(2)}k`;
+    return `${sign}$${Math.round(abs)}`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+
+  // ───── Interactions ─────
+  document.getElementById("trade-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const date = document.getElementById("trade-date").value;
+    const pnlStr = document.getElementById("trade-pnl").value;
+    if (!date || pnlStr === "") return;
+    const pnl = Number(pnlStr);
+    if (!Number.isFinite(pnl)) return;
+
+    const data = loadData(currentPin) || { trades: [] };
+    data.trades.push({ date, pnl });
+    saveData(currentPin, data);
+    document.getElementById("trade-pnl").value = "";
+    document.getElementById("trade-date").value = todayIso();
+    render();
+  });
+
+  document.getElementById("trade-list").addEventListener("click", e => {
+    const btn = e.target.closest("[data-del]");
+    if (!btn) return;
+    const [date, pnlStr] = btn.dataset.del.split("|");
+    const pnl = Number(pnlStr);
+    const data = loadData(currentPin);
+    if (!data) return;
+    const idx = data.trades.findIndex(t => t.date === date && Math.abs(t.pnl - pnl) < 1e-9);
+    if (idx === -1) return;
+    data.trades.splice(idx, 1);
+    saveData(currentPin, data);
+    render();
+  });
+
+  document.getElementById("cal-prev").addEventListener("click", () => {
+    calMonth.setMonth(calMonth.getMonth() - 1);
+    render();
+  });
+  document.getElementById("cal-next").addEventListener("click", () => {
+    calMonth.setMonth(calMonth.getMonth() + 1);
+    render();
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", showLogin);
+
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    if (!currentPin) return;
+    if (!confirm("Clear all trades for this PIN? This cannot be undone.")) return;
+    saveData(currentPin, { trades: [], createdAt: new Date().toISOString() });
+    render();
+  });
+
+  // ───── Boot ─────
+  resetPinInput();
+})();
+</script>
+
+</body>
+</html>
