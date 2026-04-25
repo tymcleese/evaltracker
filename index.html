@@ -1007,11 +1007,12 @@
     const floor = peak - DRAWDOWN_AMOUNT;
     const totalPnL = balance - STARTING_BALANCE;
     const buffer = balance - floor;
-    const bestDay = sorted.reduce(
+    const winningTrades = sorted.filter(t => t.pnl > 0);
+    const bestDay = winningTrades.reduce(
       (acc, t) => (t.pnl > (acc?.pnl ?? -Infinity) ? t : acc),
       null
     );
-    const totalProfits = sorted.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0);
+    const totalProfits = winningTrades.reduce((s, t) => s + t.pnl, 0);
     const bestDayRatio = totalPnL > 0 && bestDay ? bestDay.pnl / totalPnL : 0;
     const consistencyViolated = totalPnL > 0 && !!bestDay && bestDay.pnl / totalPnL > CONSISTENCY_LIMIT;
 
@@ -1217,7 +1218,7 @@
     document.getElementById("buffer-pct").textContent =
       s.buffer <= 0 ? "Drawdown floor hit" : `${fmtPct(drawdownUsed)} of drawdown used`;
     document.getElementById("buffer-sub").textContent =
-      s.buffer > 0 ? `floor at ${fmtMoney(s.floor)}` : "";
+      s.buffer > 0 ? `${fmtMoney(s.buffer)} remaining` : "";
 
     // Consistency
     const bestDayEl = document.getElementById("best-day-amt");
@@ -1225,10 +1226,10 @@
     const bestPctEl = document.getElementById("best-day-pct");
     const pill = document.getElementById("consistency-pill");
 
-    if (s.bestDay && s.totalPnL > 0) {
+    if (s.bestDay) {
       bestDayEl.textContent = fmtMoney(s.bestDay.pnl, true);
       bestDateEl.textContent = fmtDateLong(s.bestDay.date);
-      bestPctEl.textContent = fmtPct(s.bestDayRatio);
+      bestPctEl.textContent = s.totalPnL > 0 ? fmtPct(s.bestDayRatio) : "—";
       if (s.consistencyViolated) {
         pill.textContent = `Over 40%`;
         pill.classList.add("warn");
