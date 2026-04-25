@@ -958,12 +958,7 @@
   }
 
   async function saveData(pin, data) {
-    const computed = computeState(data.trades, data.peakBalance ?? STARTING_BALANCE);
-    const peakToStore = Math.max(
-      STARTING_BALANCE,
-      data.peakBalance ?? STARTING_BALANCE,
-      computed.peak
-    );
+    const peakToStore = computeState(data.trades).peak;
     const { error } = await sb
       .from(TABLE)
       .upsert(
@@ -993,10 +988,10 @@
     return [...trades].sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  function computeState(trades, storedPeak = STARTING_BALANCE) {
+  function computeState(trades) {
     const sorted = sortedTrades(trades);
     let balance = STARTING_BALANCE;
-    let peak = Math.max(STARTING_BALANCE, storedPeak);
+    let peak = STARTING_BALANCE;
     let floorHitEver = false;
     let everPassed = false;
 
@@ -1166,8 +1161,8 @@
 
   async function render() {
     if (!currentPin) return;
-    const data = (await loadData(currentPin)) || { trades: [], peakBalance: STARTING_BALANCE };
-    const s = computeState(data.trades, data.peakBalance);
+    const data = (await loadData(currentPin)) || { trades: [] };
+    const s = computeState(data.trades);
 
     // Status (blown → red alarm, passed → green celebrate)
     document.body.classList.toggle("blown", s.status === "blown");
