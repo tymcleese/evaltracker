@@ -1202,19 +1202,20 @@
     document.getElementById("progress-remaining").textContent =
       remaining > 0 ? `${fmtMoney(remaining)} to go` : "Target reached";
 
-    // Buffer meter
-    const bufferRatio = Math.max(0, Math.min(1, s.buffer / DRAWDOWN_AMOUNT));
+    // Drawdown meter — fills as drawdown grows; full red when blown
+    const drawdownAbs = Math.max(0, s.peak - s.balance);
+    const drawdownUsed = Math.max(0, Math.min(1, drawdownAbs / DRAWDOWN_AMOUNT));
     const bufferFill = document.getElementById("buffer-fill");
-    bufferFill.style.width = `${(bufferRatio * 100).toFixed(1)}%`;
+    bufferFill.style.width = `${(drawdownUsed * 100).toFixed(1)}%`;
     bufferFill.classList.remove("buffer-green", "buffer-yellow", "buffer-red");
-    if (bufferRatio < 0.25) bufferFill.classList.add("buffer-red");
-    else if (bufferRatio < 0.50) bufferFill.classList.add("buffer-yellow");
+    if (drawdownUsed >= 0.75) bufferFill.classList.add("buffer-red");
+    else if (drawdownUsed >= 0.25) bufferFill.classList.add("buffer-yellow");
     else bufferFill.classList.add("buffer-green");
 
     document.getElementById("buffer-text").textContent =
-      `${fmtMoney(Math.max(0, s.buffer))} remaining`;
+      `${fmtMoney(drawdownAbs)} of ${fmtMoney(DRAWDOWN_AMOUNT)} used`;
     document.getElementById("buffer-pct").textContent =
-      s.buffer <= 0 ? "Breached" : `${fmtPct(bufferRatio)} of safety zone`;
+      s.buffer <= 0 ? "Drawdown floor hit" : `${fmtPct(drawdownUsed)} of drawdown used`;
     document.getElementById("buffer-sub").textContent =
       s.buffer > 0 ? `floor at ${fmtMoney(s.floor)}` : "";
 
