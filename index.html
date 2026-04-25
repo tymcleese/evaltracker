@@ -735,6 +735,7 @@
     .cal-day-pnl { font-size: 9px; }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -908,7 +909,10 @@
 (() => {
   "use strict";
 
-  const STORAGE_PREFIX = "eval_tracker_v1_";
+  const SUPABASE_URL = "https://bfcdcgvbafbfowsiknrd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmY2RjZ3ZiYWZiZm93c2lrbnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzIwMjcsImV4cCI6MjA5MjcwODAyN30.5hPuFIVLgmYjP3bpUKnuInLUMZXFX_o9j_m6Mu2iuRk";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const TABLE = "eval_tracker_accounts";
   const VALID_PINS = ["1111", "2222", "3333"];
   const SEEDED_PIN = "1111";
   const STARTING_BALANCE = 50000;
@@ -941,30 +945,32 @@
   let pinBuffer = "";
   let calMonth = (() => { const d = new Date(); d.setDate(1); return d; })();
 
-  // ───── Storage helpers ─────
-  function storageKey(pin) { return STORAGE_PREFIX + pin; }
-
-  function getAllPins() {
-    return Object.keys(localStorage)
-      .filter(k => k.startsWith(STORAGE_PREFIX))
-      .map(k => k.slice(STORAGE_PREFIX.length));
+  // ───── Storage helpers (Supabase) ─────
+  async function loadData(pin) {
+    const { data, error } = await sb
+      .from(TABLE)
+      .select("trades")
+      .eq("pin", pin)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? { trades: data.trades || [] } : null;
   }
 
-  function loadData(pin) {
-    const raw = localStorage.getItem(storageKey(pin));
-    return raw ? JSON.parse(raw) : null;
+  async function saveData(pin, data) {
+    const { error } = await sb
+      .from(TABLE)
+      .upsert(
+        { pin, trades: data.trades, updated_at: new Date().toISOString() },
+        { onConflict: "pin" }
+      );
+    if (error) throw error;
   }
 
-  function saveData(pin, data) {
-    localStorage.setItem(storageKey(pin), JSON.stringify(data));
-  }
-
-  function createAccount(pin) {
+  async function createAccount(pin) {
     const data = {
       trades: pin === SEEDED_PIN ? [...SEED_TRADES] : [],
-      createdAt: new Date().toISOString(),
     };
-    saveData(pin, data);
+    await saveData(pin, data);
     return data;
   }
 
@@ -1089,16 +1095,25 @@
     renderDots();
   }
 
-  function attemptLogin(pin) {
+  async function attemptLogin(pin) {
     if (!VALID_PINS.includes(pin)) {
       shakeDots();
       resetPinInput("Invalid PIN");
       return;
     }
-    if (!loadData(pin)) createAccount(pin);
-    currentPin = pin;
-    pinBuffer = "";
-    showDashboard();
+    loginError.textContent = "Connecting…";
+    try {
+      const existing = await loadData(pin);
+      if (!existing) await createAccount(pin);
+      currentPin = pin;
+      pinBuffer = "";
+      loginError.textContent = " ";
+      await showDashboard();
+    } catch (err) {
+      console.error(err);
+      shakeDots();
+      resetPinInput("Connection error");
+    }
   }
 
   document.getElementById("keypad").addEventListener("click", e => {
@@ -1117,12 +1132,12 @@
   });
 
   // ───── Dashboard render ─────
-  function showDashboard() {
+  async function showDashboard() {
     loginEl.hidden = true;
     dashEl.hidden = false;
     document.getElementById("pin-badge").textContent = `PIN ••••`;
     document.getElementById("trade-date").value = todayIso();
-    render();
+    await render();
   }
 
   function showLogin() {
@@ -1133,9 +1148,9 @@
     resetPinInput();
   }
 
-  function render() {
+  async function render() {
     if (!currentPin) return;
-    const data = loadData(currentPin) || { trades: [] };
+    const data = (await loadData(currentPin)) || { trades: [] };
     const s = computeState(data.trades);
 
     // Status (blown → red alarm, passed → green celebrate)
@@ -1313,7 +1328,7 @@
   }
 
   // ───── Interactions ─────
-  document.getElementById("trade-form").addEventListener("submit", e => {
+  document.getElementById("trade-form").addEventListener("submit", async e => {
     e.preventDefault();
     const date = document.getElementById("trade-date").value;
     const pnlStr = document.getElementById("trade-pnl").value;
@@ -1321,26 +1336,42 @@
     const pnl = Number(pnlStr);
     if (!Number.isFinite(pnl)) return;
 
-    const data = loadData(currentPin) || { trades: [] };
-    data.trades.push({ date, pnl });
-    saveData(currentPin, data);
-    document.getElementById("trade-pnl").value = "";
-    document.getElementById("trade-date").value = todayIso();
-    render();
+    const submitBtn = e.target.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+    try {
+      const data = (await loadData(currentPin)) || { trades: [] };
+      data.trades.push({ date, pnl });
+      await saveData(currentPin, data);
+      document.getElementById("trade-pnl").value = "";
+      document.getElementById("trade-date").value = todayIso();
+      await render();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save trade. Check your connection and try again.");
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
-  document.getElementById("trade-list").addEventListener("click", e => {
+  document.getElementById("trade-list").addEventListener("click", async e => {
     const btn = e.target.closest("[data-del]");
     if (!btn) return;
     const [date, pnlStr] = btn.dataset.del.split("|");
     const pnl = Number(pnlStr);
-    const data = loadData(currentPin);
-    if (!data) return;
-    const idx = data.trades.findIndex(t => t.date === date && Math.abs(t.pnl - pnl) < 1e-9);
-    if (idx === -1) return;
-    data.trades.splice(idx, 1);
-    saveData(currentPin, data);
-    render();
+    btn.disabled = true;
+    try {
+      const data = await loadData(currentPin);
+      if (!data) return;
+      const idx = data.trades.findIndex(t => t.date === date && Math.abs(t.pnl - pnl) < 1e-9);
+      if (idx === -1) return;
+      data.trades.splice(idx, 1);
+      await saveData(currentPin, data);
+      await render();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete trade. Check your connection and try again.");
+      btn.disabled = false;
+    }
   });
 
   document.getElementById("cal-prev").addEventListener("click", () => {
@@ -1354,11 +1385,16 @@
 
   document.getElementById("logout-btn").addEventListener("click", showLogin);
 
-  document.getElementById("reset-btn").addEventListener("click", () => {
+  document.getElementById("reset-btn").addEventListener("click", async () => {
     if (!currentPin) return;
     if (!confirm("Clear all trades for this PIN? This cannot be undone.")) return;
-    saveData(currentPin, { trades: [], createdAt: new Date().toISOString() });
-    render();
+    try {
+      await saveData(currentPin, { trades: [] });
+      await render();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reset. Check your connection and try again.");
+    }
   });
 
   // ───── Boot ─────
