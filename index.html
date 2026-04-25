@@ -577,7 +577,7 @@
     background: var(--green-bg);
     color: var(--green-strong);
   }
-  .consistency-pill.warn { background: var(--yellow-bg); color: #92400e; }
+  .consistency-pill.warn { background: var(--red-bg); color: var(--red-strong); }
 
   /* Calendar */
   .calendar-header {
@@ -919,7 +919,6 @@
   const PROFIT_TARGET = 2500;
   const DRAWDOWN_AMOUNT = 2000;
   const CONSISTENCY_LIMIT = 0.40;
-  const DRAWDOWN_LOCK = STARTING_BALANCE; // trailing floor locks at starting balance
 
   // Starter trade data (seeded for the first PIN only)
   const SEED_TRADES = [
@@ -949,26 +948,41 @@
   async function loadData(pin) {
     const { data, error } = await sb
       .from(TABLE)
-      .select("trades")
+      .select("trades, peak_balance")
       .eq("pin", pin)
       .maybeSingle();
     if (error) throw error;
-    return data ? { trades: data.trades || [] } : null;
+    return data
+      ? { trades: data.trades || [], peakBalance: Number(data.peak_balance) || STARTING_BALANCE }
+      : null;
   }
 
   async function saveData(pin, data) {
+    const computed = computeState(data.trades, data.peakBalance ?? STARTING_BALANCE);
+    const peakToStore = Math.max(
+      STARTING_BALANCE,
+      data.peakBalance ?? STARTING_BALANCE,
+      computed.peak
+    );
     const { error } = await sb
       .from(TABLE)
       .upsert(
-        { pin, trades: data.trades, updated_at: new Date().toISOString() },
+        {
+          pin,
+          trades: data.trades,
+          peak_balance: peakToStore,
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: "pin" }
       );
     if (error) throw error;
+    data.peakBalance = peakToStore;
   }
 
   async function createAccount(pin) {
     const data = {
       trades: pin === SEEDED_PIN ? [...SEED_TRADES] : [],
+      peakBalance: STARTING_BALANCE,
     };
     await saveData(pin, data);
     return data;
@@ -979,23 +993,23 @@
     return [...trades].sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  function computeState(trades) {
+  function computeState(trades, storedPeak = STARTING_BALANCE) {
     const sorted = sortedTrades(trades);
     let balance = STARTING_BALANCE;
-    let peak = STARTING_BALANCE;
+    let peak = Math.max(STARTING_BALANCE, storedPeak);
     let floorHitEver = false;
     let everPassed = false;
 
     const rows = sorted.map(t => {
       balance += t.pnl;
       if (balance > peak) peak = balance;
-      const floorNow = Math.min(peak - DRAWDOWN_AMOUNT, DRAWDOWN_LOCK);
+      const floorNow = peak - DRAWDOWN_AMOUNT;
       if (balance <= floorNow) floorHitEver = true;
       if (balance - STARTING_BALANCE >= PROFIT_TARGET) everPassed = true;
       return { ...t, balanceAfter: balance, peakAt: peak, floorAt: floorNow };
     });
 
-    const floor = Math.min(peak - DRAWDOWN_AMOUNT, DRAWDOWN_LOCK);
+    const floor = peak - DRAWDOWN_AMOUNT;
     const totalPnL = balance - STARTING_BALANCE;
     const buffer = balance - floor;
     const bestDay = sorted.reduce(
@@ -1003,11 +1017,12 @@
       null
     );
     const totalProfits = sorted.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0);
-    const bestDayRatio = totalProfits > 0 && bestDay ? bestDay.pnl / totalProfits : 0;
+    const bestDayRatio = totalPnL > 0 && bestDay ? bestDay.pnl / totalPnL : 0;
+    const consistencyViolated = totalPnL > 0 && !!bestDay && bestDay.pnl / totalPnL > CONSISTENCY_LIMIT;
 
     let status = "active";
     if (floorHitEver) status = "blown";
-    else if (everPassed) status = "passed";
+    else if (everPassed && !consistencyViolated) status = "passed";
 
     return {
       rows,
@@ -1020,6 +1035,7 @@
       bestDay,
       bestDayRatio,
       totalProfits,
+      consistencyViolated,
     };
   }
 
@@ -1150,8 +1166,8 @@
 
   async function render() {
     if (!currentPin) return;
-    const data = (await loadData(currentPin)) || { trades: [] };
-    const s = computeState(data.trades);
+    const data = (await loadData(currentPin)) || { trades: [], peakBalance: STARTING_BALANCE };
+    const s = computeState(data.trades, data.peakBalance);
 
     // Status (blown → red alarm, passed → green celebrate)
     document.body.classList.toggle("blown", s.status === "blown");
@@ -1213,11 +1229,11 @@
     const bestPctEl = document.getElementById("best-day-pct");
     const pill = document.getElementById("consistency-pill");
 
-    if (s.bestDay && s.totalProfits > 0) {
+    if (s.bestDay && s.totalPnL > 0) {
       bestDayEl.textContent = fmtMoney(s.bestDay.pnl, true);
       bestDateEl.textContent = fmtDateLong(s.bestDay.date);
       bestPctEl.textContent = fmtPct(s.bestDayRatio);
-      if (s.bestDayRatio > CONSISTENCY_LIMIT) {
+      if (s.consistencyViolated) {
         pill.textContent = `Over 40%`;
         pill.classList.add("warn");
       } else {
@@ -1389,7 +1405,7 @@
     if (!currentPin) return;
     if (!confirm("Clear all trades for this PIN? This cannot be undone.")) return;
     try {
-      await saveData(currentPin, { trades: [] });
+      await saveData(currentPin, { trades: [], peakBalance: STARTING_BALANCE });
       await render();
     } catch (err) {
       console.error(err);
