@@ -750,13 +750,6 @@
       <button class="key" data-pin="1111">1</button>
       <button class="key" data-pin="2222">2</button>
       <button class="key" data-pin="3333">3</button>
-      <button class="key" data-pin="4444">4</button>
-      <button class="key" data-pin="5555">5</button>
-      <button class="key" data-pin="6666">6</button>
-      <button class="key" data-pin="7777">7</button>
-      <button class="key" data-pin="8888">8</button>
-      <button class="key" data-pin="9999">9</button>
-      <button class="key" data-pin="0000">0</button>
     </div>
     <p class="login-error" id="login-error">&nbsp;</p>
   </div>
@@ -907,7 +900,7 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmY2RjZ3ZiYWZiZm93c2lrbnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzIwMjcsImV4cCI6MjA5MjcwODAyN30.5hPuFIVLgmYjP3bpUKnuInLUMZXFX_o9j_m6Mu2iuRk";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const TABLE = "eval_tracker_accounts";
-  const VALID_PINS = ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999"];
+  const VALID_PINS = ["1111", "2222", "3333"];
   const SEEDED_PIN = "1111";
   const STARTING_BALANCE = 50000;
   const PROFIT_TARGET = 3000;
