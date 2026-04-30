@@ -473,6 +473,52 @@
   .trade-form button:active { transform: scale(0.98); }
   .trade-form button:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  .pnl-input-wrap {
+    display: flex;
+    align-items: stretch;
+    height: 46px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: #fafafb;
+    overflow: hidden;
+    transition: border-color 0.12s, background 0.12s;
+    min-width: 0;
+  }
+  .pnl-input-wrap:focus-within {
+    border-color: var(--blue);
+    background: var(--card);
+  }
+  .pnl-input-wrap input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0 14px;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+  }
+  .sign-toggle {
+    width: 52px;
+    flex-shrink: 0;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    border-right: 1px solid var(--border-strong);
+    color: var(--green-strong);
+    background: var(--green-bg);
+    transition: background 0.12s, color 0.12s;
+  }
+  .sign-toggle:active { transform: scale(0.96); }
+  .sign-toggle.negative {
+    color: var(--red-strong);
+    background: var(--red-bg);
+  }
+
   /* Trade list */
   .trade-list {
     display: flex;
@@ -855,7 +901,10 @@
       </div>
       <form class="trade-form" id="trade-form">
         <input type="date" id="trade-date" required />
-        <input type="number" id="trade-pnl" placeholder="P&L ($)" step="0.01" inputmode="decimal" required />
+        <div class="pnl-input-wrap">
+          <button type="button" class="sign-toggle" id="sign-toggle" aria-label="Toggle profit or loss">+</button>
+          <input type="number" id="trade-pnl" placeholder="P&L ($)" step="0.01" min="0" inputmode="decimal" required />
+        </div>
         <button type="submit">Add</button>
       </form>
     </div>
@@ -1291,13 +1340,23 @@
   }
 
   // ───── Interactions ─────
+  let signNegative = false;
+  const signToggleEl = document.getElementById("sign-toggle");
+  function setSign(neg) {
+    signNegative = neg;
+    signToggleEl.classList.toggle("negative", neg);
+    signToggleEl.textContent = neg ? "−" : "+";
+  }
+  signToggleEl.addEventListener("click", () => setSign(!signNegative));
+
   document.getElementById("trade-form").addEventListener("submit", async e => {
     e.preventDefault();
     const date = document.getElementById("trade-date").value;
     const pnlStr = document.getElementById("trade-pnl").value;
     if (!date || pnlStr === "") return;
-    const pnl = Number(pnlStr);
-    if (!Number.isFinite(pnl)) return;
+    const magnitude = Math.abs(Number(pnlStr));
+    if (!Number.isFinite(magnitude)) return;
+    const pnl = signNegative ? -magnitude : magnitude;
 
     const submitBtn = e.target.querySelector("button[type=submit]");
     submitBtn.disabled = true;
@@ -1307,6 +1366,7 @@
       await saveData(currentPin, data);
       document.getElementById("trade-pnl").value = "";
       document.getElementById("trade-date").value = todayIso();
+      setSign(false);
       await render();
     } catch (err) {
       console.error(err);
