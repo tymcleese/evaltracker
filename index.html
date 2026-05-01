@@ -17,7 +17,7 @@
     --card: #ffffff;
     --border: #ececf0;
     --border-strong: #dcdce2;
-    --text: #111113;
+    --text: #3a3a42;
     --muted: #6b7280;
     --muted-soft: #9ca3af;
     --green: #1e6b3e;
@@ -835,9 +835,21 @@
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
 
-  /* Eval result — colored page background only */
-  body.passed { background: #1e6b3e; }
-  body.blown  { background: #8b1a1a; }
+  /* Eval result — soft, subtle pulse on the page background */
+  body.passed { animation: bgCelebrate 2.4s ease-in-out infinite; }
+  body.blown  { animation: bgAlarm 2.2s ease-in-out infinite; }
+  @keyframes bgCelebrate {
+    0%, 100% { background: var(--bg); }
+    50%      { background: #c8e0d2; }
+  }
+  @keyframes bgAlarm {
+    0%, 100% { background: var(--bg); }
+    50%      { background: #e0c8c8; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.passed { animation: none; background: #c8e0d2; }
+    body.blown  { animation: none; background: #e0c8c8; }
+  }
 
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
