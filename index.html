@@ -249,37 +249,17 @@
   }
   body.blown .status-dot {
     background: var(--red);
-    animation: dotPulseR 1.4s ease-in-out infinite;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22);
   }
   body.passed .status-dot {
     background: var(--green);
-    animation: dotPulseG 1.4s ease-in-out infinite;
-  }
-  @keyframes dotPulseR {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22); }
-    50%      { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.08); }
-  }
-  @keyframes dotPulseG {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25); }
-    50%      { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0.10); }
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
   }
 
-  body.blown  { animation: bgAlarm 2s ease-in-out infinite; }
-  body.passed { animation: bgCelebrate 2.2s ease-in-out infinite; }
-  @keyframes bgAlarm {
-    0%, 100% { background: var(--bg); }
-    50%      { background: var(--alarm-bg); }
-  }
-  @keyframes bgCelebrate {
-    0%, 100% { background: var(--bg); }
-    50%      { background: var(--celebrate-bg); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    body.blown  { animation: none; background: var(--alarm-bg); }
-    body.passed { animation: none; background: var(--celebrate-bg); }
-    body.blown .status-dot,
-    body.passed .status-dot { animation: none; }
-  }
+  body.blown  { background: var(--alarm-bg); }
+  body.passed { background: var(--celebrate-bg); }
+  body.blown .status-dot,
+  body.passed .status-dot { animation: none; }
 
   .header-actions {
     display: flex;
@@ -304,6 +284,20 @@
     transition: background 0.12s, color 0.12s;
   }
   .ghost-btn:hover { background: var(--neutral-300); color: var(--text); }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    border-radius: 8px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .icon-btn svg { width: 20px; height: 20px; }
+  .icon-btn:hover { background: var(--neutral-300); color: var(--text); }
+  .icon-btn:active { background: var(--neutral-500); }
 
   /* Status banner */
   .status-banner {
@@ -654,7 +648,26 @@
     position: relative;
     width: 200px;
     height: 200px;
-    margin: 4px auto 18px;
+    margin: 4px auto 8px;
+  }
+  .stats-rr {
+    text-align: center;
+    margin: 0 auto 18px;
+  }
+  .stats-rr-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .stats-rr-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
   .stats-ring {
     width: 100%;
@@ -946,8 +959,12 @@
   <header class="app-header">
     <h1><span class="status-dot" id="status-dot" aria-hidden="true"></span>Eval Tracker</h1>
     <div class="header-actions">
-      <span class="pin-badge" id="pin-badge">PIN ••••</span>
-      <button class="ghost-btn" id="logout-btn">Lock</button>
+      <button class="icon-btn" id="logout-btn" aria-label="Lock" title="Lock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="11" width="16" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -1050,19 +1067,11 @@
           <div class="stats-ring-sub muted mono" id="stat-winrate-sub">—</div>
         </div>
       </div>
+      <div class="stats-rr">
+        <div class="stats-rr-label">Risk / Reward</div>
+        <div class="stats-rr-value mono" id="stat-rr">—</div>
+      </div>
       <div class="stats-tiles">
-        <div class="stat-tile">
-          <div class="stat-tile-label">Avg Win / Loss</div>
-          <div class="stat-tile-value mono">
-            <span class="positive" id="stat-avgwin">—</span>
-            <span class="stat-sep"> / </span>
-            <span class="negative" id="stat-avgloss">—</span>
-          </div>
-        </div>
-        <div class="stat-tile">
-          <div class="stat-tile-label">Risk / Reward</div>
-          <div class="stat-tile-value mono" id="stat-rr">—</div>
-        </div>
         <div class="stat-tile">
           <div class="stat-tile-label">Best / Worst Day</div>
           <div class="stat-tile-value mono">
@@ -1072,8 +1081,12 @@
           </div>
         </div>
         <div class="stat-tile">
-          <div class="stat-tile-label">Total Trades</div>
-          <div class="stat-tile-value mono" id="stat-total">—</div>
+          <div class="stat-tile-label">Avg Win / Loss</div>
+          <div class="stat-tile-value mono">
+            <span class="positive" id="stat-avgwin">—</span>
+            <span class="stat-sep"> / </span>
+            <span class="negative" id="stat-avgloss">—</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1348,7 +1361,6 @@
   async function showDashboard() {
     loginEl.hidden = true;
     dashEl.hidden = false;
-    document.getElementById("pin-badge").textContent = `PIN ••••`;
     document.getElementById("trade-date").value = todayIso();
     await render();
   }
@@ -1467,7 +1479,6 @@
     }
 
     // Stats — tiles
-    document.getElementById("stat-total").textContent = s.totalTrades;
     document.getElementById("stat-avgwin").textContent =
       s.winCount ? fmtMoney(s.avgWin) : "—";
     document.getElementById("stat-avgloss").textContent =
