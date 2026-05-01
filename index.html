@@ -20,11 +20,11 @@
     --text: #3a3a42;
     --muted: #6b7280;
     --muted-soft: #9ca3af;
-    --green: #1e6b3e;
-    --green-strong: #1e6b3e;
+    --green: #5aab7a;
+    --green-strong: #5aab7a;
     --green-border: #bbf0da;
-    --red: #8b1a1a;
-    --red-strong: #8b1a1a;
+    --red: #c96565;
+    --red-strong: #c96565;
     --red-border: #fecaca;
     --yellow: #f59e0b;
     --yellow-bg: #fffbeb;
@@ -52,11 +52,11 @@
       --text: #f5f5f7;
       --muted: #9ca3af;
       --muted-soft: #6b7280;
-      --green: #1e6b3e;
-      --green-strong: #1e6b3e;
+      --green: #5aab7a;
+      --green-strong: #5aab7a;
       --green-border: rgba(30, 107, 62, 0.45);
-      --red: #8b1a1a;
-      --red-strong: #8b1a1a;
+      --red: #c96565;
+      --red-strong: #c96565;
       --red-border: rgba(139, 26, 26, 0.45);
       --yellow: #f59e0b;
       --yellow-bg: rgba(245, 158, 11, 0.14);
@@ -840,15 +840,15 @@
   body.blown  { animation: bgAlarm 2.2s ease-in-out infinite; }
   @keyframes bgCelebrate {
     0%, 100% { background: var(--bg); }
-    50%      { background: #c8e0d2; }
+    50%      { background: #2a3d33; }
   }
   @keyframes bgAlarm {
     0%, 100% { background: var(--bg); }
-    50%      { background: #e0c8c8; }
+    50%      { background: #3d2a2a; }
   }
   @media (prefers-reduced-motion: reduce) {
-    body.passed { animation: none; background: #c8e0d2; }
-    body.blown  { animation: none; background: #e0c8c8; }
+    body.passed { animation: none; background: #2a3d33; }
+    body.blown  { animation: none; background: #3d2a2a; }
   }
 
   /* Utility */
