@@ -502,19 +502,23 @@
     appearance: none;
     outline: none;
   }
-  .sign-toggle {
+  .trade-form .sign-toggle {
     width: 52px;
+    height: 100%;
     flex-shrink: 0;
     font-size: 22px;
     font-weight: 600;
     line-height: 1;
+    padding: 0;
+    border-radius: 0;
     border-right: 1px solid var(--border-strong);
     color: var(--green-strong);
     background: var(--green-bg);
     transition: background 0.12s, color 0.12s;
   }
-  .sign-toggle:active { transform: scale(0.96); }
-  .sign-toggle.negative {
+  .trade-form .sign-toggle:hover { opacity: 1; }
+  .trade-form .sign-toggle:active { transform: scale(0.96); }
+  .trade-form .sign-toggle.negative {
     color: var(--red-strong);
     background: var(--red-bg);
   }
@@ -596,6 +600,25 @@
 
   .rule-label { color: var(--muted); }
   .rule-value { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+    margin: 0;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .stat-row:first-child, .stat-row:nth-child(2) { border-top: none; }
+  .stat-label { color: var(--muted); }
+  .stat-value { font-weight: 600; font-variant-numeric: tabular-nums; }
 
   /* Consistency section */
   .consistency-wrap {
@@ -761,10 +784,11 @@
     .hero-balance { font-size: 24px; }
     .hero-divider { height: 14px; }
     .card { padding: 18px 16px; }
-    .trade-form { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .trade-form button { grid-column: 1 / -1; }
+    .trade-form { grid-template-columns: 1fr; gap: 8px; }
     .rules-grid { grid-template-columns: 1fr; }
     .rule-row:nth-child(2) { border-top: 1px solid var(--border); }
+    .stats-grid { grid-template-columns: 1fr; }
+    .stat-row:nth-child(2) { border-top: 1px solid var(--border); }
     .trade-row { grid-template-columns: 1fr auto auto; gap: 10px; padding: 14px 0; }
     .trade-row .trade-balance { display: none; }
     .login-card { padding: 32px 22px 24px; border-radius: 18px; }
@@ -892,6 +916,21 @@
         <div class="consistency-stat">
           <strong id="best-day-pct">—</strong> of total profits
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Stats</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-row"><span class="stat-label">Win rate</span><span class="stat-value mono" id="stat-winrate">—</span></div>
+        <div class="stat-row"><span class="stat-label">Total trades</span><span class="stat-value mono" id="stat-total">—</span></div>
+        <div class="stat-row"><span class="stat-label">Average win</span><span class="stat-value mono positive" id="stat-avgwin">—</span></div>
+        <div class="stat-row"><span class="stat-label">Average loss</span><span class="stat-value mono negative" id="stat-avgloss">—</span></div>
+        <div class="stat-row"><span class="stat-label">Risk / Reward</span><span class="stat-value mono" id="stat-rr">—</span></div>
+        <div class="stat-row"><span class="stat-label">Best day</span><span class="stat-value mono positive" id="stat-best">—</span></div>
+        <div class="stat-row"><span class="stat-label">Worst day</span><span class="stat-value mono negative" id="stat-worst">—</span></div>
       </div>
     </div>
 
@@ -1043,11 +1082,22 @@
     const totalPnL = balance - STARTING_BALANCE;
     const buffer = balance - floor;
     const winningTrades = sorted.filter(t => t.pnl > 0);
+    const losingTrades = sorted.filter(t => t.pnl < 0);
     const bestDay = winningTrades.reduce(
       (acc, t) => (t.pnl > (acc?.pnl ?? -Infinity) ? t : acc),
       null
     );
+    const worstDay = losingTrades.reduce(
+      (acc, t) => (t.pnl < (acc?.pnl ?? Infinity) ? t : acc),
+      null
+    );
     const totalProfits = winningTrades.reduce((s, t) => s + t.pnl, 0);
+    const totalLosses = losingTrades.reduce((s, t) => s + t.pnl, 0);
+    const totalTrades = sorted.length;
+    const winRate = totalTrades > 0 ? winningTrades.length / totalTrades : 0;
+    const avgWin = winningTrades.length ? totalProfits / winningTrades.length : 0;
+    const avgLoss = losingTrades.length ? totalLosses / losingTrades.length : 0;
+    const riskReward = avgLoss !== 0 ? avgWin / Math.abs(avgLoss) : 0;
     const bestDayRatio = totalPnL > 0 && bestDay ? bestDay.pnl / totalPnL : 0;
     const consistencyViolated = totalPnL > 0 && !!bestDay && bestDay.pnl / totalPnL > CONSISTENCY_LIMIT;
 
@@ -1064,9 +1114,17 @@
       buffer,
       status,
       bestDay,
+      worstDay,
       bestDayRatio,
       totalProfits,
       consistencyViolated,
+      totalTrades,
+      winRate,
+      winCount: winningTrades.length,
+      lossCount: losingTrades.length,
+      avgWin,
+      avgLoss,
+      riskReward,
     };
   }
 
@@ -1243,6 +1301,23 @@
       pill.textContent = "OK";
       pill.classList.remove("warn");
     }
+
+    // Stats
+    document.getElementById("stat-total").textContent = s.totalTrades;
+    document.getElementById("stat-winrate").textContent =
+      s.totalTrades > 0
+        ? `${fmtPct(s.winRate, 0)} (${s.winCount}/${s.totalTrades})`
+        : "—";
+    document.getElementById("stat-avgwin").textContent =
+      s.winCount ? fmtMoney(s.avgWin, true) : "—";
+    document.getElementById("stat-avgloss").textContent =
+      s.lossCount ? fmtMoney(s.avgLoss, true) : "—";
+    document.getElementById("stat-rr").textContent =
+      s.winCount && s.lossCount ? `${s.riskReward.toFixed(2)} : 1` : "—";
+    document.getElementById("stat-best").textContent =
+      s.bestDay ? fmtMoney(s.bestDay.pnl, true) : "—";
+    document.getElementById("stat-worst").textContent =
+      s.worstDay ? fmtMoney(s.worstDay.pnl, true) : "—";
 
     // Calendar
     renderCalendar(data.trades);
