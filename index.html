@@ -835,19 +835,41 @@
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
 
-  /* Eval result banner */
-  .eval-banner {
-    padding: 14px 18px;
-    border-radius: var(--radius);
-    margin-bottom: 18px;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+  /* Eval result theme — full-page colored "banner" with white text */
+  body.passed,
+  body.blown {
+    --text: #ffffff;
+    --muted: rgba(255, 255, 255, 0.88);
+    --muted-soft: rgba(255, 255, 255, 0.7);
+    --green-strong: #ffffff;
+    --red-strong: #ffffff;
+    --green: #ffffff;
+    --red: #ffffff;
+    --card: transparent;
+    --border: rgba(255, 255, 255, 0.22);
+    --border-strong: rgba(255, 255, 255, 0.35);
+    --green-border: rgba(255, 255, 255, 0.35);
+    --red-border: rgba(255, 255, 255, 0.35);
+    --neutral-100: rgba(255, 255, 255, 0.10);
+    --neutral-200: rgba(255, 255, 255, 0.14);
+    --neutral-300: rgba(255, 255, 255, 0.18);
+    --neutral-400: rgba(255, 255, 255, 0.24);
+    --neutral-500: rgba(255, 255, 255, 0.32);
+    --neutral-day: rgba(255, 255, 255, 0.10);
+    --enter-hover: rgba(255, 255, 255, 0.85);
+    --shadow-sm: none;
+    --shadow: none;
+    --shadow-lg: none;
+  }
+  body.passed { background: #1e6b3e; }
+  body.blown  { background: #8b1a1a; }
+  body.passed .key.key-enter,
+  body.blown  .key.key-enter,
+  body.passed .trade-form button[type="submit"],
+  body.blown  .trade-form button[type="submit"] {
+    background: rgba(255, 255, 255, 0.18);
     color: #ffffff;
   }
-  .eval-banner.passed { background: var(--green); }
-  .eval-banner.blown { background: var(--red); }
 
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
@@ -929,7 +951,6 @@
   </header>
 
   <main>
-    <div class="eval-banner" id="eval-banner" hidden></div>
     <div class="hero">
       <div class="hero-label">Total P&amp;L</div>
       <div class="hero-pnl mono" id="m-pnl">—</div>
@@ -1342,21 +1363,6 @@
     // Status (blown → red alarm, passed → green celebrate)
     document.body.classList.toggle("blown", s.status === "blown");
     document.body.classList.toggle("passed", s.status === "passed");
-
-    const banner = document.getElementById("eval-banner");
-    banner.classList.remove("passed", "blown");
-    if (s.status === "passed") {
-      banner.classList.add("passed");
-      banner.textContent = "Eval Passed — profit target reached";
-      banner.hidden = false;
-    } else if (s.status === "blown") {
-      banner.classList.add("blown");
-      banner.textContent = "Eval Blown — drawdown floor hit";
-      banner.hidden = false;
-    } else {
-      banner.hidden = true;
-      banner.textContent = "";
-    }
 
     // Metrics
     document.getElementById("m-balance").textContent = fmtMoney(s.balance);
