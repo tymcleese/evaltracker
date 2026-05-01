@@ -6,7 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Eval Tracker" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0f0f10" media="(prefers-color-scheme: dark)" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23111113'/><path d='M14 41 A18 18 0 1 1 50 41' fill='none' stroke='%233a3a42' stroke-width='6' stroke-linecap='round'/><path d='M14 41 A18 18 0 0 1 43 26' fill='none' stroke='%2310b981' stroke-width='6' stroke-linecap='round'/><circle cx='32' cy='41' r='2.5' fill='%23ffffff'/><line x1='32' y1='41' x2='43' y2='26' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/></svg>" />
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png" />
 <title>Eval Tracker</title>
@@ -22,17 +23,63 @@
     --green: #10b981;
     --green-strong: #059669;
     --green-bg: #ecfdf5;
+    --green-border: #bbf0da;
     --red: #ef4444;
     --red-strong: #dc2626;
     --red-bg: #fef2f2;
+    --red-border: #fecaca;
     --yellow: #f59e0b;
     --yellow-bg: #fffbeb;
     --blue: #2563eb;
+    --neutral-100: #fafafb;
+    --neutral-200: #f4f4f5;
+    --neutral-300: #eeeef1;
+    --neutral-400: #ebebef;
+    --neutral-500: #e3e3e8;
+    --neutral-day: #f5f5f7;
+    --enter-hover: #000000;
+    --celebrate-bg: #d5f5e3;
+    --alarm-bg: #fde2e2;
     --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
     --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.03);
     --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, 0.12), 0 4px 12px -4px rgba(16, 24, 40, 0.05);
     --radius: 14px;
     --radius-sm: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f0f10;
+      --card: #18181a;
+      --border: #26262b;
+      --border-strong: #34343a;
+      --text: #f5f5f7;
+      --muted: #9ca3af;
+      --muted-soft: #6b7280;
+      --green: #10b981;
+      --green-strong: #34d399;
+      --green-bg: rgba(16, 185, 129, 0.14);
+      --green-border: rgba(16, 185, 129, 0.40);
+      --red: #ef4444;
+      --red-strong: #f87171;
+      --red-bg: rgba(239, 68, 68, 0.14);
+      --red-border: rgba(239, 68, 68, 0.40);
+      --yellow: #fbbf24;
+      --yellow-bg: rgba(245, 158, 11, 0.14);
+      --blue: #60a5fa;
+      --neutral-100: #1c1c20;
+      --neutral-200: #232328;
+      --neutral-300: #2a2a30;
+      --neutral-400: #2e2e34;
+      --neutral-500: #34343a;
+      --neutral-day: #1c1c20;
+      --enter-hover: #f5f5f7;
+      --celebrate-bg: rgba(16, 185, 129, 0.16);
+      --alarm-bg: rgba(239, 68, 68, 0.18);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 12px -4px rgba(0, 0, 0, 0.4);
+    }
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -135,7 +182,7 @@
 
   .key {
     height: 58px;
-    background: #f4f4f5;
+    background: var(--neutral-200);
     border-radius: 14px;
     font-size: 22px;
     font-weight: 500;
@@ -144,23 +191,23 @@
     user-select: none;
   }
 
-  .key:hover { background: #ebebef; }
-  .key:active { background: #e3e3e8; transform: scale(0.97); }
+  .key:hover { background: var(--neutral-400); }
+  .key:active { background: var(--neutral-500); transform: scale(0.97); }
   .key.key-action {
     background: transparent;
     font-size: 14px;
     color: var(--muted);
     font-weight: 500;
   }
-  .key.key-action:hover { background: #f0f0f2; color: var(--text); }
+  .key.key-action:hover { background: var(--neutral-300); color: var(--text); }
   .key.key-enter {
     background: var(--text);
-    color: white;
+    color: var(--card);
     font-size: 15px;
     font-weight: 500;
   }
-  .key.key-enter:hover { background: #000; }
-  .key.key-enter:active { background: #000; transform: scale(0.97); }
+  .key.key-enter:hover { background: var(--enter-hover); }
+  .key.key-enter:active { background: var(--enter-hover); transform: scale(0.97); }
 
   .login-error {
     min-height: 18px;
@@ -221,15 +268,15 @@
   body.passed { animation: bgCelebrate 2.2s ease-in-out infinite; }
   @keyframes bgAlarm {
     0%, 100% { background: var(--bg); }
-    50%      { background: #fde2e2; }
+    50%      { background: var(--alarm-bg); }
   }
   @keyframes bgCelebrate {
     0%, 100% { background: var(--bg); }
-    50%      { background: #d5f5e3; }
+    50%      { background: var(--celebrate-bg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    body.blown  { animation: none; background: #fde2e2; }
-    body.passed { animation: none; background: #d5f5e3; }
+    body.blown  { animation: none; background: var(--alarm-bg); }
+    body.passed { animation: none; background: var(--celebrate-bg); }
     body.blown .status-dot,
     body.passed .status-dot { animation: none; }
   }
@@ -243,7 +290,7 @@
   .pin-badge {
     font-size: 12px;
     color: var(--muted);
-    background: #eeeef1;
+    background: var(--neutral-300);
     padding: 5px 10px;
     border-radius: 999px;
     font-variant-numeric: tabular-nums;
@@ -256,7 +303,7 @@
     border-radius: 8px;
     transition: background 0.12s, color 0.12s;
   }
-  .ghost-btn:hover { background: #eeeef1; color: var(--text); }
+  .ghost-btn:hover { background: var(--neutral-300); color: var(--text); }
 
   /* Status banner */
   .status-banner {
@@ -400,7 +447,7 @@
   /* Progress bars */
   .progress-bar {
     height: 8px;
-    background: #eeeef1;
+    background: var(--neutral-300);
     border-radius: 999px;
     overflow: hidden;
     position: relative;
@@ -443,7 +490,8 @@
     padding: 0 14px;
     border: 1px solid var(--border-strong);
     border-radius: 10px;
-    background: #fafafb;
+    background: var(--neutral-100);
+    color: var(--text);
     font-size: 16px;
     font-variant-numeric: tabular-nums;
     transition: border-color 0.12s, background 0.12s;
@@ -463,7 +511,7 @@
     padding: 0 20px;
     border-radius: 10px;
     background: var(--text);
-    color: white;
+    color: var(--card);
     font-weight: 500;
     font-size: 15px;
     transition: opacity 0.12s, transform 0.05s;
@@ -479,7 +527,7 @@
     height: 46px;
     border: 1px solid var(--border-strong);
     border-radius: 10px;
-    background: #fafafb;
+    background: var(--neutral-100);
     overflow: hidden;
     transition: border-color 0.12s, background 0.12s;
     min-width: 0;
@@ -615,7 +663,7 @@
   }
   .stats-ring-track {
     fill: none;
-    stroke: #eeeef1;
+    stroke: var(--neutral-300);
     stroke-width: 10;
   }
   .stats-ring-fill {
@@ -661,7 +709,7 @@
     gap: 10px;
   }
   .stat-tile {
-    background: #fafafb;
+    background: var(--neutral-100);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 12px 14px;
@@ -750,8 +798,8 @@
     flex-shrink: 0;
     transition: background 0.12s, color 0.12s;
   }
-  .cal-nav-btn:hover { background: #eeeef1; color: var(--text); }
-  .cal-nav-btn:active { background: #e3e3e8; }
+  .cal-nav-btn:hover { background: var(--neutral-300); color: var(--text); }
+  .cal-nav-btn:active { background: var(--neutral-500); }
 
   .cal-weekdays {
     display: grid;
@@ -777,7 +825,7 @@
 
   .cal-day {
     aspect-ratio: 1;
-    background: #f5f5f7;
+    background: var(--neutral-day);
     border-radius: 8px;
     padding: 6px;
     display: flex;
@@ -791,11 +839,11 @@
   }
   .cal-day.profit {
     background: var(--green-bg);
-    border-color: #bbf0da;
+    border-color: var(--green-border);
   }
   .cal-day.loss {
     background: var(--red-bg);
-    border-color: #fecaca;
+    border-color: var(--red-border);
   }
   .cal-day.today {
     box-shadow: 0 0 0 2px var(--text) inset;
@@ -1425,7 +1473,7 @@
     document.getElementById("stat-avgloss").textContent =
       s.lossCount ? fmtMoney(Math.abs(s.avgLoss)) : "—";
     document.getElementById("stat-rr").textContent =
-      s.winCount && s.lossCount ? `${s.riskReward.toFixed(2)} : 1` : "—";
+      s.winCount && s.lossCount ? s.riskReward.toFixed(2) : "—";
     document.getElementById("stat-best").textContent =
       s.bestDay ? fmtMoney(s.bestDay.pnl) : "—";
     document.getElementById("stat-worst").textContent =
