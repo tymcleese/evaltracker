@@ -835,41 +835,9 @@
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
 
-  /* Eval result theme — full-page colored "banner" with white text */
-  body.passed,
-  body.blown {
-    --text: #ffffff;
-    --muted: rgba(255, 255, 255, 0.88);
-    --muted-soft: rgba(255, 255, 255, 0.7);
-    --green-strong: #ffffff;
-    --red-strong: #ffffff;
-    --green: #ffffff;
-    --red: #ffffff;
-    --card: transparent;
-    --border: rgba(255, 255, 255, 0.22);
-    --border-strong: rgba(255, 255, 255, 0.35);
-    --green-border: rgba(255, 255, 255, 0.35);
-    --red-border: rgba(255, 255, 255, 0.35);
-    --neutral-100: rgba(255, 255, 255, 0.10);
-    --neutral-200: rgba(255, 255, 255, 0.14);
-    --neutral-300: rgba(255, 255, 255, 0.18);
-    --neutral-400: rgba(255, 255, 255, 0.24);
-    --neutral-500: rgba(255, 255, 255, 0.32);
-    --neutral-day: rgba(255, 255, 255, 0.10);
-    --enter-hover: rgba(255, 255, 255, 0.85);
-    --shadow-sm: none;
-    --shadow: none;
-    --shadow-lg: none;
-  }
+  /* Eval result — colored page background only */
   body.passed { background: #1e6b3e; }
   body.blown  { background: #8b1a1a; }
-  body.passed .key.key-enter,
-  body.blown  .key.key-enter,
-  body.passed .trade-form button[type="submit"],
-  body.blown  .trade-form button[type="submit"] {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-  }
 
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
