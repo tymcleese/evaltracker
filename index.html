@@ -835,6 +835,20 @@
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
 
+  /* Eval result banner */
+  .eval-banner {
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    margin-bottom: 18px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+  }
+  .eval-banner.passed { background: var(--green); }
+  .eval-banner.blown { background: var(--red); }
+
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
   .btn-danger {
@@ -915,6 +929,7 @@
   </header>
 
   <main>
+    <div class="eval-banner" id="eval-banner" hidden></div>
     <div class="hero">
       <div class="hero-label">Total P&amp;L</div>
       <div class="hero-pnl mono" id="m-pnl">—</div>
@@ -1327,6 +1342,21 @@
     // Status (blown → red alarm, passed → green celebrate)
     document.body.classList.toggle("blown", s.status === "blown");
     document.body.classList.toggle("passed", s.status === "passed");
+
+    const banner = document.getElementById("eval-banner");
+    banner.classList.remove("passed", "blown");
+    if (s.status === "passed") {
+      banner.classList.add("passed");
+      banner.textContent = "Eval Passed — profit target reached";
+      banner.hidden = false;
+    } else if (s.status === "blown") {
+      banner.classList.add("blown");
+      banner.textContent = "Eval Blown — drawdown floor hit";
+      banner.hidden = false;
+    } else {
+      banner.hidden = true;
+      banner.textContent = "";
+    }
 
     // Metrics
     document.getElementById("m-balance").textContent = fmtMoney(s.balance);
