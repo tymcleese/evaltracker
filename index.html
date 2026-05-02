@@ -837,21 +837,6 @@
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
 
-  /* Eval result — soft, subtle pulse on the page background */
-  body.passed { animation: bgCelebrate 2.4s ease-in-out infinite; }
-  body.blown  { animation: bgAlarm 2.2s ease-in-out infinite; }
-  @keyframes bgCelebrate {
-    0%, 100% { background: var(--bg); }
-    50%      { background: #2a3d33; }
-  }
-  @keyframes bgAlarm {
-    0%, 100% { background: var(--bg); }
-    50%      { background: #3d2a2a; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    body.passed { animation: none; background: #2a3d33; }
-    body.blown  { animation: none; background: #3d2a2a; }
-  }
 
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
