@@ -176,7 +176,12 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px 12px;
-    margin-bottom: 12px;
+    margin-bottom: 4px;
+  }
+  .profile-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    padding: 10px 4px 4px;
   }
   .profile-tile {
     display: flex;
@@ -190,6 +195,9 @@
   }
   .profile-tile:hover { background: var(--neutral-200); }
   .profile-tile:active { transform: scale(0.96); }
+  .profile-grid-2 .profile-tile { padding: 14px 0; }
+  .profile-grid-2 .profile-avatar { width: 96px; height: 96px; }
+  .profile-grid-2 .profile-avatar svg { width: 56px; height: 56px; }
   .profile-avatar {
     width: 64px;
     height: 64px;
@@ -219,6 +227,27 @@
     font-variant-numeric: tabular-nums;
   }
   .profile-add .profile-label { color: var(--muted); }
+
+  .account-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 4px 0 18px;
+    gap: 10px;
+  }
+  .login-sub-inline { margin: 0; flex: 1; text-align: center; }
+  .back-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+  }
+  .back-btn:hover { background: var(--neutral-200); color: var(--text); }
+  .back-spacer { width: 36px; flex-shrink: 0; }
 
   .key {
     height: 58px;
@@ -941,8 +970,25 @@
 <div id="login" class="login-screen">
   <div class="login-card">
     <h1 class="login-title">Eval Tracker</h1>
-    <p class="login-sub" id="login-sub">Choose a profile</p>
-    <div class="profile-grid" id="profile-grid"></div>
+    <div id="view-profile">
+      <p class="login-sub">Choose a profile</p>
+      <div class="profile-grid profile-grid-2">
+        <button type="button" class="profile-tile" data-profile="a">
+          <div class="profile-avatar light"></div>
+        </button>
+        <button type="button" class="profile-tile" data-profile="b">
+          <div class="profile-avatar dark"></div>
+        </button>
+      </div>
+    </div>
+    <div id="view-account" hidden>
+      <div class="account-header">
+        <button type="button" class="back-btn" id="back-btn" aria-label="Back">‹</button>
+        <p class="login-sub login-sub-inline">Choose an account</p>
+        <span class="back-spacer"></span>
+      </div>
+      <div class="profile-grid" id="account-grid"></div>
+    </div>
     <p class="login-error" id="login-error">&nbsp;</p>
   </div>
 </div>
@@ -952,10 +998,9 @@
   <header class="app-header">
     <h1><span class="status-dot" id="status-dot" aria-hidden="true"></span>Eval Tracker</h1>
     <div class="header-actions">
-      <button class="icon-btn" id="logout-btn" aria-label="Lock" title="Lock">
+      <button class="icon-btn" id="logout-btn" aria-label="Back to accounts" title="Back to accounts">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="4" y="11" width="16" height="10" rx="2" />
-          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          <path d="M15 6l-6 6 6 6" />
         </svg>
       </button>
     </div>
@@ -1318,63 +1363,62 @@
     loginError.textContent = msg || "\u00A0";
   }
 
-  async function attemptLogin(pin) {
-    loginError.textContent = "Connecting…";
-    try {
-      const existing = await loadData(pin);
-      if (!existing) await createAccount(pin);
-      currentPin = pin;
-      loginError.textContent = " ";
-      await showDashboard();
-    } catch (err) {
-      console.error(err);
-      resetPinInput("Connection error");
-    }
-  }
-
   const AVATAR_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" fill="currentColor"/><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6v.5H4V20Z" fill="currentColor"/></svg>`;
 
-  async function loadProfilePins() {
+  let currentProfile = null; // 'a' (white) | 'b' (dark)
+
+  function profileOf(pin) {
+    return pin.startsWith("b-") ? "b" : "a";
+  }
+
+  function newPinForProfile(profile) {
+    return profile + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  async function loadAllPins() {
     try {
       const { data, error } = await sb
         .from(TABLE)
         .select("pin, created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      const remote = (data || []).map(r => r.pin);
-      // Ensure the original seeded slots exist up front, in their canonical order
-      const ordered = [];
-      for (const p of SEED_PINS) if (remote.includes(p)) ordered.push(p);
-      for (const p of remote) if (!ordered.includes(p)) ordered.push(p);
-      return ordered;
+      return (data || []).map(r => r.pin);
     } catch (err) {
       console.error(err);
       return SEED_PINS.slice();
     }
   }
 
-  function newProfilePin() {
-    return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function pinsForProfile(profile, allPins) {
+    const filtered = allPins.filter(p => profileOf(p) === profile);
+    if (profile === "a") {
+      // Keep original seeded slots first in their canonical order
+      const seeded = SEED_PINS.filter(p => filtered.includes(p));
+      const rest = filtered.filter(p => !SEED_PINS.includes(p));
+      return [...seeded, ...rest];
+    }
+    return filtered;
   }
 
-  async function renderProfileGrid() {
-    const grid = document.getElementById("profile-grid");
+  async function renderAccountGrid() {
+    const grid = document.getElementById("account-grid");
     grid.innerHTML = `<div class="profile-tile" aria-hidden="true"><div class="profile-avatar light"></div><div class="profile-label">…</div></div>`;
-    let pins = await loadProfilePins();
-    // Seed PIN 1111 with starter trades on first ever visit
-    if (!pins.includes(SEEDED_PIN)) {
+    let all = await loadAllPins();
+    // Seed PIN 1111 with starter trades on first ever visit (Profile A only)
+    if (currentProfile === "a" && !all.includes(SEEDED_PIN)) {
       try {
         await createAccount(SEEDED_PIN);
-        pins = await loadProfilePins();
+        all.push(SEEDED_PIN);
       } catch (err) { console.error(err); }
     }
+    const pins = pinsForProfile(currentProfile, all);
+    const tone = currentProfile === "a" ? "light" : "dark";
     grid.innerHTML = "";
     pins.forEach((pin, i) => {
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "profile-tile";
       tile.dataset.pin = pin;
-      const tone = i % 2 === 0 ? "dark" : "light";
       tile.innerHTML = `<div class="profile-avatar ${tone}">${AVATAR_SVG}</div><div class="profile-label">${i + 1}</div>`;
       grid.appendChild(tile);
     });
@@ -1386,15 +1430,66 @@
     grid.appendChild(addBtn);
   }
 
-  document.getElementById("profile-grid").addEventListener("click", async e => {
+  // ───── View transitions (with browser-history support) ─────
+  function showProfileSelect(push = true) {
+    loginEl.hidden = false;
+    dashEl.hidden = true;
+    document.getElementById("view-profile").hidden = false;
+    document.getElementById("view-account").hidden = true;
+    document.body.classList.remove("blown", "passed");
+    currentProfile = null;
+    currentPin = null;
+    resetPinInput();
+    if (push) history.pushState({ view: "profile" }, "", "#");
+  }
+
+  async function showAccountSelect(profile, push = true) {
+    loginEl.hidden = false;
+    dashEl.hidden = true;
+    document.getElementById("view-profile").hidden = true;
+    document.getElementById("view-account").hidden = false;
+    document.body.classList.remove("blown", "passed");
+    currentProfile = profile;
+    currentPin = null;
+    if (push) history.pushState({ view: "account", profile }, "", "#profile=" + profile);
+    await renderAccountGrid();
+  }
+
+  async function showDashboardFor(pin, push = true) {
+    loginError.textContent = "Connecting…";
+    try {
+      const existing = await loadData(pin);
+      if (!existing) await createAccount(pin);
+      currentPin = pin;
+      currentProfile = profileOf(pin);
+      loginError.textContent = " ";
+      loginEl.hidden = true;
+      dashEl.hidden = false;
+      document.getElementById("trade-date").value = todayIso();
+      await render();
+      if (push) history.pushState({ view: "dashboard", pin }, "", "#account=" + encodeURIComponent(pin));
+    } catch (err) {
+      console.error(err);
+      resetPinInput("Connection error");
+    }
+  }
+
+  // ───── Click wiring ─────
+  document.getElementById("view-profile").addEventListener("click", e => {
+    const tile = e.target.closest(".profile-tile");
+    if (!tile || !tile.dataset.profile) return;
+    showAccountSelect(tile.dataset.profile);
+  });
+
+  document.getElementById("account-grid").addEventListener("click", async e => {
     const tile = e.target.closest(".profile-tile");
     if (!tile) return;
     if (tile.id === "profile-add") {
       tile.disabled = true;
       try {
-        const pin = newProfilePin();
+        const pin = newPinForProfile(currentProfile);
         await createAccount(pin);
-        await renderProfileGrid();
+        await renderAccountGrid();
       } catch (err) {
         console.error(err);
         resetPinInput("Connection error");
@@ -1402,25 +1497,21 @@
       }
       return;
     }
-    if (tile.dataset.pin) attemptLogin(tile.dataset.pin);
+    if (tile.dataset.pin) showDashboardFor(tile.dataset.pin);
   });
 
-  // ───── Dashboard render ─────
-  async function showDashboard() {
-    loginEl.hidden = true;
-    dashEl.hidden = false;
-    document.getElementById("trade-date").value = todayIso();
-    await render();
-  }
+  document.getElementById("back-btn").addEventListener("click", () => history.back());
 
-  function showLogin() {
-    dashEl.hidden = true;
-    loginEl.hidden = false;
-    document.body.classList.remove("blown", "passed");
-    currentPin = null;
-    resetPinInput();
-    renderProfileGrid();
-  }
+  window.addEventListener("popstate", async e => {
+    const state = e.state || { view: "profile" };
+    if (state.view === "profile") {
+      showProfileSelect(false);
+    } else if (state.view === "account") {
+      await showAccountSelect(state.profile || "a", false);
+    } else if (state.view === "dashboard" && state.pin) {
+      await showDashboardFor(state.pin, false);
+    }
+  });
 
   async function render() {
     if (!currentPin) return;
@@ -1701,7 +1792,7 @@
     render();
   });
 
-  document.getElementById("logout-btn").addEventListener("click", showLogin);
+  document.getElementById("logout-btn").addEventListener("click", () => history.back());
 
   document.getElementById("reset-btn").addEventListener("click", async () => {
     if (!currentPin) return;
@@ -1717,7 +1808,8 @@
 
   // ───── Boot ─────
   resetPinInput();
-  renderProfileGrid();
+  history.replaceState({ view: "profile" }, "", "#");
+  showProfileSelect(false);
 })();
 </script>
 
