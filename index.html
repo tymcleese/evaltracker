@@ -172,6 +172,54 @@
     margin-bottom: 12px;
   }
 
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 12px;
+    margin-bottom: 12px;
+  }
+  .profile-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-radius: 12px;
+    transition: transform 0.08s, background 0.12s;
+    user-select: none;
+  }
+  .profile-tile:hover { background: var(--neutral-200); }
+  .profile-tile:active { transform: scale(0.96); }
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--border-strong);
+  }
+  .profile-avatar svg { width: 38px; height: 38px; display: block; }
+  .profile-avatar.dark { background: #18181a; border-color: #18181a; }
+  .profile-avatar.dark svg { color: #ffffff; }
+  .profile-avatar.light { background: #ffffff; }
+  .profile-avatar.light svg { color: #6b7280; }
+  .profile-add .profile-avatar {
+    background: transparent;
+    border-style: dashed;
+    color: var(--muted);
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+  }
+  .profile-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .profile-add .profile-label { color: var(--muted); }
+
   .key {
     height: 58px;
     background: var(--neutral-200);
@@ -893,12 +941,8 @@
 <div id="login" class="login-screen">
   <div class="login-card">
     <h1 class="login-title">Eval Tracker</h1>
-    <p class="login-sub" id="login-sub">Tap your profile</p>
-    <div class="keypad" id="keypad">
-      <button class="key" data-pin="1111">1</button>
-      <button class="key" data-pin="2222">2</button>
-      <button class="key" data-pin="3333">3</button>
-    </div>
+    <p class="login-sub" id="login-sub">Choose a profile</p>
+    <div class="profile-grid" id="profile-grid"></div>
     <p class="login-error" id="login-error">&nbsp;</p>
   </div>
 </div>
@@ -1094,7 +1138,7 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmY2RjZ3ZiYWZiZm93c2lrbnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzIwMjcsImV4cCI6MjA5MjcwODAyN30.5hPuFIVLgmYjP3bpUKnuInLUMZXFX_o9j_m6Mu2iuRk";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const TABLE = "eval_tracker_accounts";
-  const VALID_PINS = ["1111", "2222", "3333"];
+  const SEED_PINS = ["1111", "2222", "3333"];
   const SEEDED_PIN = "1111";
   const STARTING_BALANCE = 50000;
   const PROFIT_TARGET = 3000;
@@ -1275,10 +1319,6 @@
   }
 
   async function attemptLogin(pin) {
-    if (!VALID_PINS.includes(pin)) {
-      resetPinInput("Invalid PIN");
-      return;
-    }
     loginError.textContent = "Connecting…";
     try {
       const existing = await loadData(pin);
@@ -1292,18 +1332,77 @@
     }
   }
 
-  document.getElementById("keypad").addEventListener("click", e => {
-    const btn = e.target.closest("[data-pin]");
-    if (!btn) return;
-    attemptLogin(btn.dataset.pin);
-  });
+  const AVATAR_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" fill="currentColor"/><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6v.5H4V20Z" fill="currentColor"/></svg>`;
 
-  document.addEventListener("keydown", e => {
-    if (!dashEl.hidden) return;
-    if (/^[0-9]$/.test(e.key)) {
-      e.preventDefault();
-      attemptLogin(e.key.repeat(4));
+  async function loadProfilePins() {
+    try {
+      const { data, error } = await sb
+        .from(TABLE)
+        .select("pin, created_at")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const remote = (data || []).map(r => r.pin);
+      // Ensure the original seeded slots exist up front, in their canonical order
+      const ordered = [];
+      for (const p of SEED_PINS) if (remote.includes(p)) ordered.push(p);
+      for (const p of remote) if (!ordered.includes(p)) ordered.push(p);
+      return ordered;
+    } catch (err) {
+      console.error(err);
+      return SEED_PINS.slice();
     }
+  }
+
+  function newProfilePin() {
+    return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  async function renderProfileGrid() {
+    const grid = document.getElementById("profile-grid");
+    grid.innerHTML = `<div class="profile-tile" aria-hidden="true"><div class="profile-avatar light"></div><div class="profile-label">…</div></div>`;
+    let pins = await loadProfilePins();
+    // Seed PIN 1111 with starter trades on first ever visit
+    if (!pins.includes(SEEDED_PIN)) {
+      try {
+        await createAccount(SEEDED_PIN);
+        pins = await loadProfilePins();
+      } catch (err) { console.error(err); }
+    }
+    grid.innerHTML = "";
+    pins.forEach((pin, i) => {
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "profile-tile";
+      tile.dataset.pin = pin;
+      const tone = i % 2 === 0 ? "dark" : "light";
+      tile.innerHTML = `<div class="profile-avatar ${tone}">${AVATAR_SVG}</div><div class="profile-label">${i + 1}</div>`;
+      grid.appendChild(tile);
+    });
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "profile-tile profile-add";
+    addBtn.id = "profile-add";
+    addBtn.innerHTML = `<div class="profile-avatar">+</div><div class="profile-label">Add</div>`;
+    grid.appendChild(addBtn);
+  }
+
+  document.getElementById("profile-grid").addEventListener("click", async e => {
+    const tile = e.target.closest(".profile-tile");
+    if (!tile) return;
+    if (tile.id === "profile-add") {
+      tile.disabled = true;
+      try {
+        const pin = newProfilePin();
+        await createAccount(pin);
+        await renderProfileGrid();
+      } catch (err) {
+        console.error(err);
+        resetPinInput("Connection error");
+        tile.disabled = false;
+      }
+      return;
+    }
+    if (tile.dataset.pin) attemptLogin(tile.dataset.pin);
   });
 
   // ───── Dashboard render ─────
@@ -1320,6 +1419,7 @@
     document.body.classList.remove("blown", "passed");
     currentPin = null;
     resetPinInput();
+    renderProfileGrid();
   }
 
   async function render() {
@@ -1617,6 +1717,7 @@
 
   // ───── Boot ─────
   resetPinInput();
+  renderProfileGrid();
 })();
 </script>
 
