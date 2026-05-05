@@ -192,6 +192,7 @@
     border-radius: 12px;
     transition: transform 0.08s, background 0.12s;
     user-select: none;
+    position: relative;
   }
   .profile-tile:hover { background: var(--neutral-200); }
   .profile-tile:active { transform: scale(0.96); }
@@ -206,27 +207,58 @@
     align-items: center;
     justify-content: center;
     border: 1.5px solid var(--border-strong);
+    background: var(--neutral-200);
+    color: var(--muted);
   }
   .profile-avatar svg { width: 38px; height: 38px; display: block; }
-  .profile-avatar.dark { background: #18181a; border-color: #18181a; }
-  .profile-avatar.dark svg { color: #ffffff; }
-  .profile-avatar.light { background: #ffffff; }
-  .profile-avatar.light svg { color: #6b7280; }
-  .profile-add .profile-avatar {
-    background: transparent;
-    border-style: dashed;
-    color: var(--muted);
-    font-size: 28px;
-    font-weight: 300;
-    line-height: 1;
-  }
   .profile-label {
     font-size: 13px;
     font-weight: 500;
     color: var(--text);
     font-variant-numeric: tabular-nums;
   }
-  .profile-add .profile-label { color: var(--muted); }
+  /* account number circle (Screen 2) */
+  .account-num {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .account-num-add {
+    border-style: dashed;
+    color: var(--muted);
+    font-size: 28px;
+    font-weight: 300;
+  }
+  /* delete button on account tiles */
+  .acct-del {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--neutral-400);
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.12s;
+    z-index: 1;
+  }
+  .acct-del:hover { background: var(--red-border); color: var(--red); }
+  .profile-tile:hover .acct-del { opacity: 1; }
+  @media (hover: none) { .acct-del { opacity: 1; } }
 
   .account-header {
     display: flex;
@@ -974,10 +1006,10 @@
       <p class="login-sub">Choose a profile</p>
       <div class="profile-grid profile-grid-2">
         <button type="button" class="profile-tile" data-profile="a">
-          <div class="profile-avatar light"></div>
+          <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" fill="currentColor"/><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6v.5H4V20Z" fill="currentColor"/></svg></div>
         </button>
         <button type="button" class="profile-tile" data-profile="b">
-          <div class="profile-avatar dark"></div>
+          <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" fill="currentColor"/><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6v.5H4V20Z" fill="currentColor"/></svg></div>
         </button>
       </div>
     </div>
@@ -1183,7 +1215,7 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmY2RjZ3ZiYWZiZm93c2lrbnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzIwMjcsImV4cCI6MjA5MjcwODAyN30.5hPuFIVLgmYjP3bpUKnuInLUMZXFX_o9j_m6Mu2iuRk";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const TABLE = "eval_tracker_accounts";
-  const SEED_PINS = ["1111", "2222", "3333"];
+  const SEED_PINS = ["1111"];
   const SEEDED_PIN = "1111";
   const STARTING_BALANCE = 50000;
   const PROFIT_TARGET = 3000;
@@ -1363,7 +1395,10 @@
     loginError.textContent = msg || "\u00A0";
   }
 
-  const AVATAR_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Z" fill="currentColor"/><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6v.5H4V20Z" fill="currentColor"/></svg>`;
+  async function deleteAccount(pin) {
+    const { error } = await sb.from(TABLE).delete().eq("pin", pin);
+    if (error) throw error;
+  }
 
   let currentProfile = null; // 'a' (white) | 'b' (dark)
 
@@ -1402,31 +1437,39 @@
 
   async function renderAccountGrid() {
     const grid = document.getElementById("account-grid");
-    grid.innerHTML = `<div class="profile-tile" aria-hidden="true"><div class="profile-avatar light"></div><div class="profile-label">…</div></div>`;
+    grid.innerHTML = `<div class="profile-tile" aria-hidden="true"><div class="account-num" style="font-size:20px;color:var(--muted)">…</div></div>`;
     let all = await loadAllPins();
-    // Seed PIN 1111 with starter trades on first ever visit (Profile A only)
+    // Auto-seed Profile A with 1111 (starter trades) on first visit
     if (currentProfile === "a" && !all.includes(SEEDED_PIN)) {
       try {
         await createAccount(SEEDED_PIN);
-        all.push(SEEDED_PIN);
+        all = await loadAllPins();
+      } catch (err) { console.error(err); }
+    }
+    // Auto-seed Profile B with one account if it has none
+    if (currentProfile === "b" && pinsForProfile("b", all).length === 0) {
+      try {
+        const newPin = newPinForProfile("b");
+        await createAccount(newPin);
+        all = await loadAllPins();
       } catch (err) { console.error(err); }
     }
     const pins = pinsForProfile(currentProfile, all);
-    const tone = currentProfile === "a" ? "light" : "dark";
     grid.innerHTML = "";
     pins.forEach((pin, i) => {
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "profile-tile";
       tile.dataset.pin = pin;
-      tile.innerHTML = `<div class="profile-avatar ${tone}">${AVATAR_SVG}</div><div class="profile-label">${i + 1}</div>`;
+      const delBtn = `<button type="button" class="acct-del" data-pin="${pin}" data-num="${i + 1}" aria-label="Delete account ${i + 1}">×</button>`;
+      tile.innerHTML = `${delBtn}<div class="account-num">${i + 1}</div>`;
       grid.appendChild(tile);
     });
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "profile-tile profile-add";
     addBtn.id = "profile-add";
-    addBtn.innerHTML = `<div class="profile-avatar">+</div><div class="profile-label">Add</div>`;
+    addBtn.innerHTML = `<div class="account-num account-num-add">+</div>`;
     grid.appendChild(addBtn);
   }
 
@@ -1482,6 +1525,23 @@
   });
 
   document.getElementById("account-grid").addEventListener("click", async e => {
+    // Delete button
+    const delBtn = e.target.closest(".acct-del");
+    if (delBtn) {
+      e.stopPropagation();
+      const pin = delBtn.dataset.pin;
+      const num = delBtn.dataset.num;
+      if (!confirm(`Delete Account ${num}? This cannot be undone.`)) return;
+      delBtn.disabled = true;
+      try {
+        await deleteAccount(pin);
+        await renderAccountGrid();
+      } catch (err) {
+        console.error(err);
+        resetPinInput("Connection error");
+      }
+      return;
+    }
     const tile = e.target.closest(".profile-tile");
     if (!tile) return;
     if (tile.id === "profile-add") {
