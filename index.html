@@ -237,6 +237,16 @@
     font-size: 28px;
     font-weight: 300;
   }
+  .account-num.blown {
+    background: rgba(201, 101, 101, 0.18);
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .account-num.passed {
+    background: rgba(90, 171, 122, 0.18);
+    border-color: var(--green);
+    color: var(--green);
+  }
   /* delete button on account tiles */
   .acct-del {
     position: absolute;
@@ -1497,14 +1507,23 @@
       } catch (err) { console.error(err); }
     }
     const pins = pinsForProfile(currentProfile, all);
+    // Load all account statuses in parallel
+    const statuses = await Promise.all(pins.map(async pin => {
+      try {
+        const d = await loadData(pin);
+        return d ? computeState(d.trades).status : "active";
+      } catch { return "active"; }
+    }));
     grid.innerHTML = "";
     pins.forEach((pin, i) => {
+      const status = statuses[i];
+      const statusClass = status === "blown" ? " blown" : status === "passed" ? " passed" : "";
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "profile-tile";
       tile.dataset.pin = pin;
       const delBtn = `<span role="button" class="acct-del" data-pin="${pin}" data-num="${i + 1}" aria-label="Delete account ${i + 1}">×</span>`;
-      tile.innerHTML = `${delBtn}<div class="account-num">${i + 1}</div>`;
+      tile.innerHTML = `${delBtn}<div class="account-num${statusClass}">${i + 1}</div>`;
       grid.appendChild(tile);
     });
     const addBtn = document.createElement("button");
