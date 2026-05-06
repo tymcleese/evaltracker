@@ -1437,7 +1437,8 @@
         .select("pin, created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data || []).map(r => r.pin);
+      const deleted = getLocallyDeleted();
+      return (data || []).map(r => r.pin).filter(p => !deleted.has(p));
     } catch (err) {
       console.error(err);
       return SEED_PINS.slice();
@@ -1453,6 +1454,15 @@
   }
 
   let deleteMode = false;
+
+  // Pins deleted locally (persisted in localStorage to survive re-renders when Supabase RLS blocks DELETE)
+  function getLocallyDeleted() {
+    try { return new Set(JSON.parse(localStorage.getItem("_del_pins") || "[]")); } catch { return new Set(); }
+  }
+  function markLocallyDeleted(pin) {
+    const s = getLocallyDeleted(); s.add(pin);
+    localStorage.setItem("_del_pins", JSON.stringify([...s]));
+  }
 
   function setDeleteMode(on) {
     deleteMode = on;
@@ -1493,7 +1503,7 @@
       tile.type = "button";
       tile.className = "profile-tile";
       tile.dataset.pin = pin;
-      const delBtn = `<button type="button" class="acct-del" data-pin="${pin}" data-num="${i + 1}" aria-label="Delete account ${i + 1}">×</button>`;
+      const delBtn = `<span role="button" class="acct-del" data-pin="${pin}" data-num="${i + 1}" aria-label="Delete account ${i + 1}">×</span>`;
       tile.innerHTML = `${delBtn}<div class="account-num">${i + 1}</div>`;
       grid.appendChild(tile);
     });
@@ -1581,13 +1591,16 @@
     if (delBtn) {
       e.stopPropagation();
       const pin = delBtn.dataset.pin;
-      delBtn.disabled = true;
+      const tile = delBtn.closest(".profile-tile");
+      if (tile) tile.remove();
+      markLocallyDeleted(pin);
       try {
         await deleteAccount(pin);
         await renderAccountGrid();
       } catch (err) {
         console.error(err);
         resetPinInput("Connection error");
+        await renderAccountGrid();
       }
       return;
     }
