@@ -1242,7 +1242,21 @@
 
   const SUPABASE_URL = "https://bfcdcgvbafbfowsiknrd.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmY2RjZ3ZiYWZiZm93c2lrbnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzIwMjcsImV4cCI6MjA5MjcwODAyN30.5hPuFIVLgmYjP3bpUKnuInLUMZXFX_o9j_m6Mu2iuRk";
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Force every Supabase request to bypass HTTP caches so reads always return
+  // the latest DB state across devices.
+  const noCacheFetch = (url, opts = {}) => {
+    const u = typeof url === "string" ? url : url.url;
+    const sep = u.includes("?") ? "&" : "?";
+    const busted = u + sep + "_=" + Date.now();
+    const headers = new Headers(opts.headers || {});
+    headers.set("Cache-Control", "no-cache");
+    headers.set("Pragma", "no-cache");
+    return fetch(busted, { ...opts, headers, cache: "no-store" });
+  };
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
+    global: { fetch: noCacheFetch },
+  });
   const TABLE = "eval_tracker_accounts";
   const SEED_PINS = ["1111"];
   const SEED_PINS_B = ["2222"];
@@ -1447,8 +1461,7 @@
         .select("pin, created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      const deleted = getLocallyDeleted();
-      return (data || []).map(r => r.pin).filter(p => !deleted.has(p));
+      return (data || []).map(r => r.pin);
     } catch (err) {
       console.error(err);
       return SEED_PINS.slice();
@@ -1464,15 +1477,6 @@
   }
 
   let deleteMode = false;
-
-  // Pins deleted locally (persisted in localStorage to survive re-renders when Supabase RLS blocks DELETE)
-  function getLocallyDeleted() {
-    try { return new Set(JSON.parse(localStorage.getItem("_del_pins") || "[]")); } catch { return new Set(); }
-  }
-  function markLocallyDeleted(pin) {
-    const s = getLocallyDeleted(); s.add(pin);
-    localStorage.setItem("_del_pins", JSON.stringify([...s]));
-  }
 
   function setDeleteMode(on) {
     deleteMode = on;
@@ -1612,7 +1616,6 @@
       const pin = delBtn.dataset.pin;
       const tile = delBtn.closest(".profile-tile");
       if (tile) tile.remove();
-      markLocallyDeleted(pin);
       try {
         await deleteAccount(pin);
         await renderAccountGrid();
@@ -1948,6 +1951,7 @@
   });
 
   // ───── Boot ─────
+  try { localStorage.removeItem("_del_pins"); } catch {}
   resetPinInput();
   history.replaceState({ view: "profile" }, "", "#");
   showProfileSelect(false);
