@@ -1296,9 +1296,8 @@
       .eq("pin", pin)
       .maybeSingle();
     if (error) throw error;
-    return data
-      ? { trades: data.trades || [], peakBalance: Number(data.peak_balance) || STARTING_BALANCE }
-      : null;
+    if (!data || isDeleted(data.trades)) return null;
+    return { trades: data.trades || [], peakBalance: Number(data.peak_balance) || STARTING_BALANCE };
   }
 
   async function saveData(pin, data) {
@@ -1438,8 +1437,25 @@
     loginError.textContent = msg || "\u00A0";
   }
 
+  // Supabase RLS blocks DELETE for the anon role (returns 200 but affects 0
+  // rows), so we soft-delete by upserting a sentinel marker into the row.
+  // loadAllPins filters these out so they're hidden across all devices.
+  const DELETED_SENTINEL = { __deleted: true };
+  function isDeleted(trades) {
+    return Array.isArray(trades) && trades.length === 1 && trades[0] && trades[0].__deleted === true;
+  }
   async function deleteAccount(pin) {
-    const { error } = await sb.from(TABLE).delete().eq("pin", pin);
+    const { error } = await sb
+      .from(TABLE)
+      .upsert(
+        {
+          pin,
+          trades: [DELETED_SENTINEL],
+          peak_balance: STARTING_BALANCE,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "pin" }
+      );
     if (error) throw error;
   }
 
@@ -1457,10 +1473,10 @@
     try {
       const { data, error } = await sb
         .from(TABLE)
-        .select("pin, created_at")
+        .select("pin, created_at, trades")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data || []).map(r => r.pin);
+      return (data || []).filter(r => !isDeleted(r.trades)).map(r => r.pin);
     } catch (err) {
       console.error(err);
       return SEED_PINS.slice();
