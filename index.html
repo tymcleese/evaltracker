@@ -1876,6 +1876,8 @@
   function fmtCalendarPnl(n) {
     const sign = n >= 0 ? "+" : "-";
     const abs = Math.abs(n);
+    if (abs >= 100000) return `${sign}$${Math.round(abs / 1000)}k`;
+    if (abs >= 10000) return `${sign}$${(abs / 1000).toFixed(1)}k`;
     if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(2)}k`;
     return `${sign}$${Math.round(abs)}`;
   }
