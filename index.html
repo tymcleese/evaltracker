@@ -974,6 +974,50 @@
   }
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
+  .cal-day.has-pnl { cursor: pointer; }
+
+  .cal-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .cal-modal.open { display: flex; }
+  .cal-modal-card {
+    background: var(--neutral-day);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+  .cal-modal-date {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .cal-modal-pnl {
+    font-size: 40px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    word-break: break-all;
+  }
+  .cal-modal-pnl.positive { color: var(--green-strong); }
+  .cal-modal-pnl.negative { color: var(--red-strong); }
+  .cal-modal-close {
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+  }
+  .cal-modal-close:hover { color: var(--text); background: var(--neutral-300); }
 
 
   /* Utility */
@@ -1109,6 +1153,14 @@
         <div class="cal-weekday">Sat</div>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="cal-modal" id="cal-modal">
+      <div class="cal-modal-card">
+        <div class="cal-modal-date" id="cal-modal-date"></div>
+        <div class="cal-modal-pnl" id="cal-modal-pnl"></div>
+        <button class="cal-modal-close" id="cal-modal-close" type="button">Close</button>
+      </div>
     </div>
 
     <div class="metrics-grid">
@@ -1866,8 +1918,10 @@
       const pnlHtml = pnl !== undefined
         ? `<div class="cal-day-pnl">${escapeHtml(fmtCalendarPnl(pnl))}</div>`
         : "";
+      if (pnl !== undefined) classes.push("has-pnl");
 
-      cells.push(`<div class="${classes.join(" ")}"><div class="cal-day-num">${d}</div>${pnlHtml}</div>`);
+      const dataAttr = pnl !== undefined ? ` data-date="${iso}" data-pnl="${pnl}"` : "";
+      cells.push(`<div class="${classes.join(" ")}"${dataAttr}><div class="cal-day-num">${d}</div>${pnlHtml}</div>`);
     }
 
     grid.innerHTML = cells.join("");
@@ -1952,6 +2006,27 @@
     calMonth.setMonth(calMonth.getMonth() + 1);
     render();
   });
+
+  const calModal = document.getElementById("cal-modal");
+  const calModalDate = document.getElementById("cal-modal-date");
+  const calModalPnl = document.getElementById("cal-modal-pnl");
+  function closeCalModal() { calModal.classList.remove("open"); }
+  document.getElementById("cal-grid").addEventListener("click", e => {
+    const cell = e.target.closest(".cal-day.has-pnl");
+    if (!cell) return;
+    const iso = cell.dataset.date;
+    const pnl = parseFloat(cell.dataset.pnl);
+    const [y, m, d] = iso.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    calModalDate.textContent = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    calModalPnl.textContent = fmtMoney(pnl, true);
+    calModalPnl.classList.remove("positive", "negative");
+    if (pnl > 0) calModalPnl.classList.add("positive");
+    else if (pnl < 0) calModalPnl.classList.add("negative");
+    calModal.classList.add("open");
+  });
+  calModal.addEventListener("click", e => { if (e.target === calModal) closeCalModal(); });
+  document.getElementById("cal-modal-close").addEventListener("click", closeCalModal);
 
   document.getElementById("logout-btn").addEventListener("click", () => history.back());
 
