@@ -561,8 +561,46 @@
   /* Trade form */
   .trade-form {
     display: grid;
-    grid-template-columns: 140px 1fr auto;
+    grid-template-columns: 130px 1fr auto auto;
     gap: 10px;
+  }
+
+  .result-toggle {
+    display: inline-flex;
+    height: 46px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--neutral-100);
+  }
+  .trade-form .result-toggle button {
+    width: 44px;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .trade-form .result-toggle button + button {
+    border-left: 1px solid var(--border-strong);
+  }
+  .trade-form .result-toggle button.active[data-result="W"] {
+    background: var(--green-strong);
+    color: var(--card);
+  }
+  .trade-form .result-toggle button.active[data-result="L"] {
+    background: var(--red-strong);
+    color: var(--card);
+  }
+  .trade-form .result-toggle button.active[data-result="BE"] {
+    background: var(--text);
+    color: var(--card);
   }
 
   .trade-form input {
@@ -1043,6 +1081,8 @@
     .hero-divider { height: 14px; }
     .card { padding: 18px 16px; }
     .trade-form { grid-template-columns: 1fr; gap: 8px; }
+    .result-toggle { width: 100%; }
+    .trade-form .result-toggle button { flex: 1; }
     .rules-grid { grid-template-columns: 1fr; }
     .rule-row:nth-child(2) { border-top: 1px solid var(--border); }
     .stats-ring-wrap { width: 180px; height: 180px; }
@@ -1252,6 +1292,11 @@
           <button type="button" class="sign-toggle" id="sign-toggle" aria-label="Toggle profit or loss">+</button>
           <input type="number" id="trade-pnl" placeholder="P&L ($)" step="0.01" min="0" inputmode="decimal" required />
         </div>
+        <div class="result-toggle" id="result-toggle" role="group" aria-label="Trade result">
+          <button type="button" data-result="W" class="active" aria-label="Win">W</button>
+          <button type="button" data-result="L" aria-label="Loss">L</button>
+          <button type="button" data-result="BE" aria-label="Break even">BE</button>
+        </div>
         <button type="submit">Add</button>
       </form>
     </div>
@@ -1379,8 +1424,16 @@
   }
 
   // ───── Domain logic ─────
+  function inferResult(pnl) {
+    if (pnl > 0) return "W";
+    if (pnl < 0) return "L";
+    return "BE";
+  }
+
   function sortedTrades(trades) {
-    return [...trades].sort((a, b) => a.date.localeCompare(b.date));
+    return [...trades]
+      .map(t => (t.result ? t : { ...t, result: inferResult(t.pnl) }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   }
 
   function computeState(trades) {
@@ -1402,22 +1455,25 @@
     const floor = peak - DRAWDOWN_AMOUNT;
     const totalPnL = balance - STARTING_BALANCE;
     const buffer = balance - floor;
-    const winningTrades = sorted.filter(t => t.pnl > 0);
-    const losingTrades = sorted.filter(t => t.pnl < 0);
-    const bestDay = winningTrades.reduce(
+    const wins = sorted.filter(t => t.result === "W");
+    const losses = sorted.filter(t => t.result === "L");
+    const profitable = sorted.filter(t => t.pnl > 0);
+    const unprofitable = sorted.filter(t => t.pnl < 0);
+    const bestDay = profitable.reduce(
       (acc, t) => (t.pnl > (acc?.pnl ?? -Infinity) ? t : acc),
       null
     );
-    const worstDay = losingTrades.reduce(
+    const worstDay = unprofitable.reduce(
       (acc, t) => (t.pnl < (acc?.pnl ?? Infinity) ? t : acc),
       null
     );
-    const totalProfits = winningTrades.reduce((s, t) => s + t.pnl, 0);
-    const totalLosses = losingTrades.reduce((s, t) => s + t.pnl, 0);
+    const totalProfits = profitable.reduce((s, t) => s + t.pnl, 0);
+    const totalLosses = unprofitable.reduce((s, t) => s + t.pnl, 0);
     const totalTrades = sorted.length;
-    const winRate = totalTrades > 0 ? winningTrades.length / totalTrades : 0;
-    const avgWin = winningTrades.length ? totalProfits / winningTrades.length : 0;
-    const avgLoss = losingTrades.length ? totalLosses / losingTrades.length : 0;
+    const wlTotal = wins.length + losses.length;
+    const winRate = wlTotal > 0 ? wins.length / wlTotal : 0;
+    const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgLoss = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
     const riskReward = avgLoss !== 0 ? avgWin / Math.abs(avgLoss) : 0;
     const bestDayRatio = totalPnL > 0 && bestDay ? bestDay.pnl / totalPnL : 0;
     const consistencyViolated = totalPnL > 0 && !!bestDay && bestDay.pnl / totalPnL > CONSISTENCY_LIMIT;
@@ -1441,8 +1497,8 @@
       consistencyViolated,
       totalTrades,
       winRate,
-      winCount: winningTrades.length,
-      lossCount: losingTrades.length,
+      winCount: wins.length,
+      lossCount: losses.length,
       avgWin,
       avgLoss,
       riskReward,
@@ -1814,10 +1870,11 @@
     const ring = document.getElementById("winrate-ring");
     const ringPct = document.getElementById("stat-winrate-pct");
     const ringSub = document.getElementById("stat-winrate-sub");
+    const wlTotal = s.winCount + s.lossCount;
     if (s.totalTrades > 0) {
       ring.style.strokeDashoffset = (RING_C * (1 - s.winRate)).toFixed(2);
-      ringPct.textContent = `${Math.round(s.winRate * 100)}%`;
-      ringSub.textContent = `${s.winCount} / ${s.totalTrades}`;
+      ringPct.textContent = wlTotal > 0 ? `${Math.round(s.winRate * 100)}%` : "—";
+      ringSub.textContent = `${s.winCount} / ${wlTotal}`;
       // Color-code the ring: red <40%, yellow 40-55%, green >=55%
       ring.style.stroke =
         s.winRate >= 0.55 ? "var(--green)" :
@@ -1950,6 +2007,20 @@
   }
   signToggleEl.addEventListener("click", () => setSign(!signNegative));
 
+  let selectedResult = "W";
+  const resultToggleEl = document.getElementById("result-toggle");
+  function setResult(r) {
+    selectedResult = r;
+    resultToggleEl.querySelectorAll("button").forEach(b => {
+      b.classList.toggle("active", b.dataset.result === r);
+    });
+  }
+  resultToggleEl.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-result]");
+    if (!btn) return;
+    setResult(btn.dataset.result);
+  });
+
   document.getElementById("trade-form").addEventListener("submit", async e => {
     e.preventDefault();
     const date = document.getElementById("trade-date").value;
@@ -1963,11 +2034,12 @@
     submitBtn.disabled = true;
     try {
       const data = (await loadData(currentPin)) || { trades: [] };
-      data.trades.push({ date, pnl });
+      data.trades.push({ date, pnl, result: selectedResult });
       await saveData(currentPin, data);
       document.getElementById("trade-pnl").value = "";
       document.getElementById("trade-date").value = todayIso();
       setSign(false);
+      setResult("W");
       await render();
     } catch (err) {
       console.error(err);
