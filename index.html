@@ -28,6 +28,8 @@
     --red-border: #fecaca;
     --yellow: #f59e0b;
     --yellow-bg: #fffbeb;
+    --orange: #e0852a;
+    --orange-border: rgba(224, 133, 42, 0.4);
     --blue: #2563eb;
     --neutral-100: #fafafb;
     --neutral-200: #f4f4f5;
@@ -60,6 +62,8 @@
       --red-border: rgba(139, 26, 26, 0.45);
       --yellow: #f59e0b;
       --yellow-bg: rgba(245, 158, 11, 0.14);
+      --orange: #f0944a;
+      --orange-border: rgba(240, 148, 74, 0.45);
       --blue: #60a5fa;
       --neutral-100: #1c1c20;
       --neutral-200: #232328;
@@ -982,6 +986,10 @@
     border-color: var(--red-border);
     background: rgba(201, 101, 101, 0.12);
   }
+  .cal-day.breakeven {
+    border-color: var(--orange-border);
+    background: rgba(240, 148, 74, 0.12);
+  }
   .cal-day.today {
     box-shadow: 0 0 0 2px var(--text) inset;
   }
@@ -993,7 +1001,8 @@
     line-height: 1;
   }
   .cal-day.profit .cal-day-num,
-  .cal-day.loss .cal-day-num {
+  .cal-day.loss .cal-day-num,
+  .cal-day.breakeven .cal-day-num {
     color: var(--text);
     opacity: 0.55;
   }
@@ -1012,6 +1021,7 @@
   }
   .cal-day.profit .cal-day-pnl { color: var(--green-strong); }
   .cal-day.loss .cal-day-pnl { color: var(--red-strong); }
+  .cal-day.breakeven .cal-day-pnl { color: var(--orange); }
   .cal-day.has-pnl { cursor: pointer; }
 
   .cal-modal {
@@ -1048,6 +1058,8 @@
   }
   .cal-modal-pnl.positive { color: var(--green-strong); }
   .cal-modal-pnl.negative { color: var(--red-strong); }
+  .cal-modal-pnl.breakeven { color: var(--orange); }
+  .breakeven { color: var(--orange); }
   .cal-modal-close {
     margin-top: 20px;
     font-size: 13px;
@@ -1914,7 +1926,7 @@
         <div class="trade-row">
           <div class="trade-date">${fmtDate(r.date)}</div>
           <div class="trade-balance mono">${fmtMoney(r.balanceAfter)}</div>
-          <div class="trade-pnl mono ${r.pnl >= 0 ? "positive" : "negative"}">${fmtMoney(r.pnl, true)}</div>
+          <div class="trade-pnl mono ${r.result === "BE" ? "breakeven" : (r.pnl >= 0 ? "positive" : "negative")}">${fmtMoney(r.pnl, true)}</div>
           <button class="trade-delete" data-del="${escapeAttr(r.date)}|${r.pnl}" title="Remove">×</button>
         </div>
       `).join("");
@@ -1931,7 +1943,13 @@
     const daysInMonth = new Date(y, m + 1, 0).getDate();
 
     const byDate = {};
-    trades.forEach(t => { byDate[t.date] = (byDate[t.date] || 0) + t.pnl; });
+    const resultByDate = {};
+    trades.forEach(t => {
+      byDate[t.date] = (byDate[t.date] || 0) + t.pnl;
+      const r = t.result || (t.pnl > 0 ? "W" : t.pnl < 0 ? "L" : "BE");
+      if (resultByDate[t.date] === undefined) resultByDate[t.date] = r;
+      else if (resultByDate[t.date] !== r) resultByDate[t.date] = "MIX";
+    });
 
     let monthTotal = 0;
     let tradingDays = 0;
@@ -1968,7 +1986,9 @@
       const iso = `${y}-${mm}-${String(d).padStart(2, "0")}`;
       const pnl = byDate[iso];
       const classes = ["cal-day"];
-      if (pnl > 0) classes.push("profit");
+      const dayResult = resultByDate[iso];
+      if (dayResult === "BE") classes.push("breakeven");
+      else if (pnl > 0) classes.push("profit");
       else if (pnl < 0) classes.push("loss");
       if (iso === today) classes.push("today");
 
@@ -1977,7 +1997,7 @@
         : "";
       if (pnl !== undefined) classes.push("has-pnl");
 
-      const dataAttr = pnl !== undefined ? ` data-date="${iso}" data-pnl="${pnl}"` : "";
+      const dataAttr = pnl !== undefined ? ` data-date="${iso}" data-pnl="${pnl}" data-result="${dayResult || ""}"` : "";
       cells.push(`<div class="${classes.join(" ")}"${dataAttr}><div class="cal-day-num">${d}</div>${pnlHtml}</div>`);
     }
 
@@ -2092,8 +2112,9 @@
     const dt = new Date(y, m - 1, d);
     calModalDate.textContent = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
     calModalPnl.textContent = fmtMoney(pnl, true);
-    calModalPnl.classList.remove("positive", "negative");
-    if (pnl > 0) calModalPnl.classList.add("positive");
+    calModalPnl.classList.remove("positive", "negative", "breakeven");
+    if (cell.dataset.result === "BE") calModalPnl.classList.add("breakeven");
+    else if (pnl > 0) calModalPnl.classList.add("positive");
     else if (pnl < 0) calModalPnl.classList.add("negative");
     calModal.classList.add("open");
   });
