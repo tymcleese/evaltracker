@@ -1396,13 +1396,6 @@
       </div>
     </div>
 
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">Reset this account</div>
-        <div class="muted" style="font-size:13px;">Clears all trades for this PIN.</div>
-      </div>
-      <button class="btn-danger" id="reset-btn">Reset</button>
-    </div>
   </main>
 </div>
 
@@ -2384,18 +2377,6 @@
   document.getElementById("cal-modal-close").addEventListener("click", closeCalModal);
 
   document.getElementById("logout-btn").addEventListener("click", () => history.back());
-
-  document.getElementById("reset-btn").addEventListener("click", async () => {
-    if (!currentPin) return;
-    if (!confirm("Clear all trades for this PIN? This cannot be undone.")) return;
-    try {
-      await saveData(currentPin, { trades: [], peakBalance: STARTING_BALANCE });
-      await render();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to reset. Check your connection and try again.");
-    }
-  });
 
   // ───── Boot ─────
   // One-time cleanup of stale per-device soft-delete list so previously
