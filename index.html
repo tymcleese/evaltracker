@@ -238,6 +238,26 @@
     transition: background 0.12s, color 0.12s;
   }
   .profile-edit:hover { background: var(--neutral-300); color: var(--text); }
+  /* delete button on profile tiles (edit mode only) */
+  .profile-del {
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--neutral-200);
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: background 0.12s, color 0.12s;
+  }
+  .profile-del:hover { background: var(--red-border); color: var(--red); }
   /* corner pencil toggle on the profile select screen */
   #view-profile { position: relative; }
   .profile-edit-toggle {
@@ -1666,6 +1686,15 @@
     if (error) throw error;
   }
 
+  async function deleteProfile(id) {
+    // Soft-delete the profile row and every account that belongs to it.
+    await deleteAccount(PROFILE_PIN_PREFIX + id);
+    const all = await loadAllPins();
+    for (const pin of all.filter(p => profileOf(p) === id)) {
+      await deleteAccount(pin);
+    }
+  }
+
   function avatarLetter(name) {
     return (String(name || "").trim()[0] || "?").toUpperCase();
   }
@@ -1803,9 +1832,10 @@
       console.error(err);
       profiles = [];
     }
-    // Seed the default T / J profiles on first run
-    for (const seed of [{ id: "a", name: "T" }, { id: "b", name: "J" }]) {
-      if (!profiles.some(p => p.id === seed.id)) {
+    // Seed the default T / J profiles only on a true first run (no profiles
+    // at all) so that deleting a profile later actually sticks.
+    if (profiles.length === 0) {
+      for (const seed of [{ id: "a", name: "T" }, { id: "b", name: "J" }]) {
         try {
           await saveProfile(seed.id, seed.name);
           profiles.push(seed);
@@ -1827,15 +1857,22 @@
       label.className = "profile-label";
       label.textContent = p.name;
 
-      // Rename button — only shown in edit mode
+      // Rename + delete buttons — only shown in edit mode
       if (profileEditMode) {
+        const del = document.createElement("span");
+        del.className = "profile-del";
+        del.setAttribute("role", "button");
+        del.dataset.profile = p.id;
+        del.setAttribute("aria-label", "Delete profile " + p.name);
+        del.textContent = "×";
+
         const edit = document.createElement("span");
         edit.className = "profile-edit";
         edit.setAttribute("role", "button");
         edit.dataset.profile = p.id;
         edit.setAttribute("aria-label", "Rename profile " + p.name);
         edit.textContent = "✎";
-        tile.append(edit, av, label);
+        tile.append(del, edit, av, label);
       } else {
         tile.append(av, label);
       }
@@ -1915,6 +1952,23 @@
   document.getElementById("view-profile").addEventListener("click", async e => {
     // The corner pencil toggle is handled by its own listener
     if (e.target.closest("#profile-edit-toggle")) return;
+    // Delete an existing profile (with confirmation)
+    const delBtn = e.target.closest(".profile-del");
+    if (delBtn) {
+      e.stopPropagation();
+      const id = delBtn.dataset.profile;
+      const prof = profiles.find(p => p.id === id);
+      const label = prof ? prof.name : "this profile";
+      if (!confirm(`Are you sure you want to delete "${label}"? This also removes its accounts and cannot be undone.`)) return;
+      try {
+        await deleteProfile(id);
+        await renderProfileGrid();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete profile. Check your connection and try again.");
+      }
+      return;
+    }
     // Rename an existing profile
     const editBtn = e.target.closest(".profile-edit");
     if (editBtn) {
