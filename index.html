@@ -1128,6 +1128,45 @@
   }
   .cal-modal-close:hover { color: var(--text); background: var(--neutral-300); }
 
+  /* Size picker modal */
+  .size-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 24px; }
+  .size-modal.open { display: flex; }
+  .size-modal-card {
+    background: var(--neutral-day);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+  }
+  .size-modal-title { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  .size-modal-sub { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+  .size-options { display: flex; flex-direction: column; gap: 10px; }
+  .size-option {
+    width: 100%;
+    height: 56px;
+    border-radius: 12px;
+    border: 1px solid var(--border-strong);
+    background: var(--neutral-100);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition: background 0.12s, border-color 0.12s, transform 0.05s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .size-option:hover { background: var(--neutral-300); border-color: var(--text); }
+  .size-option:active { transform: scale(0.98); }
+  .size-option-target {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
 
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
@@ -1384,19 +1423,33 @@
 
     <div class="card">
       <div class="card-header">
-        <h2>Tradify Select 50k Eval</h2>
+        <h2 id="rules-title">Tradify Select 50k Eval</h2>
       </div>
       <div class="rules-grid">
-        <div class="rule-row"><span class="rule-label">Profit target</span><span class="rule-value">$3,000</span></div>
+        <div class="rule-row"><span class="rule-label">Profit target</span><span class="rule-value" id="rule-target">$3,000</span></div>
         <div class="rule-row"><span class="rule-label">Consistency rule</span><span class="rule-value">40%</span></div>
-        <div class="rule-row"><span class="rule-label">EOD Drawdown</span><span class="rule-value">$2,000</span></div>
-        <div class="rule-row"><span class="rule-label">Trailing drawdown</span><span class="rule-value">$2,000</span></div>
+        <div class="rule-row"><span class="rule-label">EOD Drawdown</span><span class="rule-value" id="rule-eod">$2,000</span></div>
+        <div class="rule-row"><span class="rule-label">Trailing drawdown</span><span class="rule-value" id="rule-trail">$2,000</span></div>
         <div class="rule-row"><span class="rule-label">Daily loss limit</span><span class="rule-value">None</span></div>
-        <div class="rule-row"><span class="rule-label">Max contracts</span><span class="rule-value">4 mini / 40 micro</span></div>
+        <div class="rule-row"><span class="rule-label">Max contracts</span><span class="rule-value" id="rule-contracts">4 mini / 40 micro</span></div>
       </div>
     </div>
 
   </main>
+</div>
+
+<!-- Size picker modal -->
+<div class="size-modal" id="size-modal" role="dialog" aria-modal="true" aria-labelledby="size-modal-title">
+  <div class="size-modal-card">
+    <p class="size-modal-title" id="size-modal-title">New Account</p>
+    <p class="size-modal-sub">Choose an account size</p>
+    <div class="size-options" id="size-options">
+      <button type="button" class="size-option" data-size="50000"><span>$50,000</span><span class="size-option-target">$3,000 target</span></button>
+      <button type="button" class="size-option" data-size="100000"><span>$100,000</span><span class="size-option-target">$6,000 target</span></button>
+      <button type="button" class="size-option" data-size="150000"><span>$150,000</span><span class="size-option-target">$9,000 target</span></button>
+    </div>
+    <button class="cal-modal-close" id="size-modal-cancel" type="button">Cancel</button>
+  </div>
 </div>
 
 <script>
@@ -1423,10 +1476,22 @@
   const SEED_PINS = ["1111"];
   const SEED_PINS_B = ["2222"];
   const SEEDED_PIN = "1111";
-  const STARTING_BALANCE = 50000;
-  const PROFIT_TARGET = 3000;
-  const DRAWDOWN_AMOUNT = 2000;
   const CONSISTENCY_LIMIT = 0.40;
+
+  // ───── Account sizes ─────
+  const ACCOUNT_SIZES = {
+    50000: { size: 50000, label: "50k", starting: 50000, target: 3000, drawdown: 2000, minis: 4, micros: 40 },
+    100000: { size: 100000, label: "100k", starting: 100000, target: 6000, drawdown: 3000, minis: 8, micros: 80 },
+    150000: { size: 150000, label: "150k", starting: 150000, target: 9000, drawdown: 4500, minis: 12, micros: 120 },
+  };
+  const DEFAULT_SIZE = 50000;
+  // Pin format for new accounts: "<profile>-<sizeLabel>-<rand>", e.g. "a-100k-xyz123".
+  // Legacy pins (1111, 2222, "<profile>-<rand>") default to 50k.
+  function sizeForPin(pin) {
+    const m = String(pin || "").match(/(?:^|-)(50|100|150)k(?:-|$)/);
+    const size = m ? Number(m[1]) * 1000 : DEFAULT_SIZE;
+    return ACCOUNT_SIZES[size] || ACCOUNT_SIZES[DEFAULT_SIZE];
+  }
 
   // Starter trade data (seeded for the first PIN only)
   const SEED_TRADES = [
@@ -1460,11 +1525,13 @@
       .maybeSingle();
     if (error) throw error;
     if (!data || isDeleted(data.trades)) return null;
-    return { trades: data.trades || [], peakBalance: Number(data.peak_balance) || STARTING_BALANCE };
+    const cfg = sizeForPin(pin);
+    return { trades: data.trades || [], peakBalance: Number(data.peak_balance) || cfg.starting };
   }
 
   async function saveData(pin, data) {
-    const peakToStore = computeState(data.trades).peak;
+    const cfg = sizeForPin(pin);
+    const peakToStore = computeState(data.trades, cfg).peak;
     const { error } = await sb
       .from(TABLE)
       .upsert(
@@ -1481,9 +1548,10 @@
   }
 
   async function createAccount(pin) {
+    const cfg = sizeForPin(pin);
     const data = {
       trades: pin === SEEDED_PIN ? [...SEED_TRADES] : [],
-      peakBalance: STARTING_BALANCE,
+      peakBalance: cfg.starting,
     };
     await saveData(pin, data);
     return data;
@@ -1502,24 +1570,24 @@
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  function computeState(trades) {
+  function computeState(trades, cfg = ACCOUNT_SIZES[DEFAULT_SIZE]) {
     const sorted = sortedTrades(trades);
-    let balance = STARTING_BALANCE;
-    let peak = STARTING_BALANCE;
+    let balance = cfg.starting;
+    let peak = cfg.starting;
     let floorHitEver = false;
     let everPassed = false;
 
     const rows = sorted.map(t => {
       balance += t.pnl;
       if (balance > peak) peak = balance;
-      const floorNow = peak - DRAWDOWN_AMOUNT;
+      const floorNow = peak - cfg.drawdown;
       if (balance <= floorNow) floorHitEver = true;
-      if (balance - STARTING_BALANCE >= PROFIT_TARGET) everPassed = true;
+      if (balance - cfg.starting >= cfg.target) everPassed = true;
       return { ...t, balanceAfter: balance, peakAt: peak, floorAt: floorNow };
     });
 
-    const floor = peak - DRAWDOWN_AMOUNT;
-    const totalPnL = balance - STARTING_BALANCE;
+    const floor = peak - cfg.drawdown;
+    const totalPnL = balance - cfg.starting;
     const buffer = balance - floor;
     const wins = sorted.filter(t => t.result === "W");
     const losses = sorted.filter(t => t.result === "L");
@@ -1625,7 +1693,7 @@
         {
           pin,
           trades: [DELETED_SENTINEL],
-          peak_balance: STARTING_BALANCE,
+          peak_balance: ACCOUNT_SIZES[DEFAULT_SIZE].starting,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "pin" }
@@ -1671,7 +1739,7 @@
         {
           pin: PROFILE_PIN_PREFIX + id,
           trades: [{ __profile__: true, name }],
-          peak_balance: STARTING_BALANCE,
+          peak_balance: ACCOUNT_SIZES[DEFAULT_SIZE].starting,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "pin" }
@@ -1700,8 +1768,9 @@
     return "a";
   }
 
-  function newPinForProfile(profile) {
-    return profile + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function newPinForProfile(profile, size = DEFAULT_SIZE) {
+    const cfg = ACCOUNT_SIZES[size] || ACCOUNT_SIZES[DEFAULT_SIZE];
+    return profile + "-" + cfg.label + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
   async function loadAllPins() {
@@ -1775,7 +1844,7 @@
     const statuses = await Promise.all(pins.map(async pin => {
       try {
         const d = await loadData(pin);
-        return d ? computeState(d.trades).status : "active";
+        return d ? computeState(d.trades, sizeForPin(pin)).status : "active";
       } catch { return "active"; }
     }));
     grid.innerHTML = "";
@@ -2019,16 +2088,7 @@
     const tile = e.target.closest(".profile-tile");
     if (!tile) return;
     if (tile.id === "profile-add") {
-      tile.disabled = true;
-      try {
-        const pin = newPinForProfile(currentProfile);
-        await createAccount(pin);
-        await renderAccountGrid();
-      } catch (err) {
-        console.error(err);
-        resetPinInput("Connection error");
-        tile.disabled = false;
-      }
+      openSizeModal();
       return;
     }
     if (tile.dataset.pin) showDashboardFor(tile.dataset.pin);
@@ -2049,8 +2109,16 @@
 
   async function render() {
     if (!currentPin) return;
+    const cfg = sizeForPin(currentPin);
     const data = (await loadData(currentPin)) || { trades: [] };
-    const s = computeState(data.trades);
+    const s = computeState(data.trades, cfg);
+
+    // Rules card — reflect this account's size
+    document.getElementById("rules-title").textContent = `Tradify Select ${cfg.label} Eval`;
+    document.getElementById("rule-target").textContent = fmtMoney(cfg.target).replace(".00", "");
+    document.getElementById("rule-eod").textContent = fmtMoney(cfg.drawdown).replace(".00", "");
+    document.getElementById("rule-trail").textContent = fmtMoney(cfg.drawdown).replace(".00", "");
+    document.getElementById("rule-contracts").textContent = `${cfg.minis} mini / ${cfg.micros} micro`;
 
     // Status (blown → red alarm, passed → green celebrate)
     document.body.classList.toggle("blown", s.status === "blown");
@@ -2068,11 +2136,11 @@
     document.getElementById("m-floor").textContent = fmtMoney(s.floor);
 
     // Progress to target (positive: green, left→right / negative: red, right→left; full red = blown)
-    const progressRaw = s.totalPnL / PROFIT_TARGET;
+    const progressRaw = s.totalPnL / cfg.target;
     const fillEl = document.getElementById("progress-fill");
     fillEl.classList.remove("buffer-red", "buffer-yellow", "buffer-green");
     if (s.totalPnL < 0) {
-      const dangerRatio = Math.min(1, Math.abs(s.totalPnL) / DRAWDOWN_AMOUNT);
+      const dangerRatio = Math.min(1, Math.abs(s.totalPnL) / cfg.drawdown);
       fillEl.style.width = `${(dangerRatio * 100).toFixed(1)}%`;
       fillEl.classList.add("negative");
     } else {
@@ -2081,18 +2149,18 @@
       fillEl.classList.remove("negative");
     }
     document.getElementById("progress-ratio").textContent =
-      `${fmtMoney(s.totalPnL, true)} / ${fmtMoney(PROFIT_TARGET)}`;
+      `${fmtMoney(s.totalPnL, true)} / ${fmtMoney(cfg.target)}`;
     const pctEl = document.getElementById("progress-pct");
     pctEl.textContent = `${fmtPct(progressRaw)} complete`;
     pctEl.classList.toggle("negative", s.totalPnL < 0);
     pctEl.classList.toggle("positive", s.totalPnL > 0);
-    const remaining = PROFIT_TARGET - s.totalPnL;
+    const remaining = cfg.target - s.totalPnL;
     document.getElementById("progress-remaining").textContent =
       remaining > 0 ? `${fmtMoney(remaining)} to go` : "Target reached";
 
     // Drawdown meter — fills as drawdown grows; full red when blown
     const drawdownAbs = Math.max(0, s.peak - s.balance);
-    const drawdownUsed = Math.max(0, Math.min(1, drawdownAbs / DRAWDOWN_AMOUNT));
+    const drawdownUsed = Math.max(0, Math.min(1, drawdownAbs / cfg.drawdown));
     const bufferFill = document.getElementById("buffer-fill");
     bufferFill.style.width = `${(drawdownUsed * 100).toFixed(1)}%`;
     bufferFill.classList.remove("buffer-green", "buffer-yellow", "buffer-red");
@@ -2101,7 +2169,7 @@
     else bufferFill.classList.add("buffer-green");
 
     document.getElementById("buffer-text").textContent =
-      `${fmtMoney(drawdownAbs)} of ${fmtMoney(DRAWDOWN_AMOUNT)} used`;
+      `${fmtMoney(drawdownAbs)} of ${fmtMoney(cfg.drawdown)} used`;
     document.getElementById("buffer-pct").textContent =
       s.buffer <= 0 ? "Drawdown floor hit" : `${fmtPct(drawdownUsed)} of drawdown used`;
     document.getElementById("buffer-sub").textContent =
@@ -2375,6 +2443,30 @@
   });
   calModal.addEventListener("click", e => { if (e.target === calModal) closeCalModal(); });
   document.getElementById("cal-modal-close").addEventListener("click", closeCalModal);
+
+  // ───── Size picker (used when creating a new account) ─────
+  const sizeModal = document.getElementById("size-modal");
+  function openSizeModal() { sizeModal.classList.add("open"); }
+  function closeSizeModal() { sizeModal.classList.remove("open"); }
+  sizeModal.addEventListener("click", e => { if (e.target === sizeModal) closeSizeModal(); });
+  document.getElementById("size-modal-cancel").addEventListener("click", closeSizeModal);
+  document.getElementById("size-options").addEventListener("click", async e => {
+    const btn = e.target.closest("button[data-size]");
+    if (!btn) return;
+    const size = Number(btn.dataset.size);
+    btn.disabled = true;
+    try {
+      const pin = newPinForProfile(currentProfile, size);
+      await createAccount(pin);
+      closeSizeModal();
+      await renderAccountGrid();
+    } catch (err) {
+      console.error(err);
+      resetPinInput("Connection error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   document.getElementById("logout-btn").addEventListener("click", () => history.back());
 
