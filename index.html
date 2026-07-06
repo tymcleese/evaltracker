@@ -106,315 +106,6 @@
   .positive { color: var(--green-strong); }
   .negative { color: var(--red-strong); }
 
-  /* ───────── LOGIN ───────── */
-  .login-screen {
-    min-height: 100dvh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
-    background: var(--bg);
-  }
-
-  .login-card {
-    width: 100%;
-    max-width: 360px;
-    background: var(--card);
-    border-radius: 20px;
-    padding: 36px 28px 28px;
-    box-shadow: var(--shadow-lg);
-    text-align: center;
-  }
-
-  .login-title {
-    font-size: 24px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    margin: 0 0 6px;
-  }
-
-  .login-sub {
-    color: var(--muted);
-    font-size: 14px;
-    margin: 0 0 28px;
-  }
-
-  .pin-dots {
-    display: flex;
-    gap: 14px;
-    justify-content: center;
-    margin: 0 0 28px;
-    height: 16px;
-  }
-
-  .dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1.5px solid var(--border-strong);
-    transition: background 0.15s, border-color 0.15s, transform 0.15s;
-  }
-
-  .dot.filled {
-    background: var(--text);
-    border-color: var(--text);
-    transform: scale(1.08);
-  }
-
-  .pin-dots.shake { animation: shake 0.42s; }
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    20%,60% { transform: translateX(-6px); }
-    40%,80% { transform: translateX(6px); }
-  }
-
-  .keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-
-  .profile-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px 12px;
-    margin-bottom: 4px;
-  }
-  .profile-grid-2 {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 18px;
-    padding: 10px 4px 4px;
-  }
-  .profile-tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0;
-    border-radius: 12px;
-    transition: transform 0.08s, background 0.12s;
-    user-select: none;
-    position: relative;
-  }
-  .profile-tile:hover { background: var(--neutral-200); }
-  .profile-tile:active { transform: scale(0.96); }
-  .profile-grid-2 .profile-tile { padding: 14px 0; }
-  .profile-grid-2 .profile-avatar { width: 96px; height: 96px; }
-  .profile-grid-2 .profile-avatar svg { width: 56px; height: 56px; }
-  .profile-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1.5px solid var(--border-strong);
-    background: var(--neutral-200);
-    color: var(--text);
-    font-size: 32px;
-    font-weight: 600;
-  }
-  .profile-grid-2 .profile-avatar { font-size: 48px; }
-  .profile-avatar svg { width: 38px; height: 38px; display: block; }
-  /* rename button on profile tiles */
-  .profile-edit {
-    position: absolute;
-    top: 4px;
-    right: 8px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--neutral-200);
-    border: 1px solid var(--border-strong);
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    transition: background 0.12s, color 0.12s;
-  }
-  .profile-edit:hover { background: var(--neutral-300); color: var(--text); }
-  /* delete button on profile tiles (edit mode only) */
-  .profile-del {
-    position: absolute;
-    top: 4px;
-    left: 8px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--neutral-200);
-    border: 1px solid var(--border-strong);
-    color: var(--muted);
-    font-size: 16px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    transition: background 0.12s, color 0.12s;
-  }
-  .profile-del:hover { background: var(--red-border); color: var(--red); }
-  /* corner pencil toggle on the profile select screen */
-  #view-profile { position: relative; }
-  .profile-edit-toggle {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--neutral-200);
-    border: 1px solid var(--border-strong);
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.12s, color 0.12s;
-    z-index: 3;
-  }
-  .profile-edit-toggle:hover { background: var(--neutral-300); color: var(--text); }
-  .profile-edit-toggle.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-  .profile-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-  }
-  /* account number circle (Screen 2) */
-  .account-num {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    border: 1.5px solid var(--border-strong);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--text);
-  }
-  .account-num-add {
-    border-style: dashed;
-    color: var(--muted);
-    font-size: 28px;
-    font-weight: 300;
-  }
-  .account-num.blown {
-    background: rgba(201, 101, 101, 0.18);
-    border-color: var(--red);
-    color: var(--red);
-  }
-  .account-num.passed {
-    background: rgba(90, 171, 122, 0.18);
-    border-color: var(--green);
-    color: var(--green);
-  }
-  /* delete button on account tiles */
-  .acct-del {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--neutral-400);
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s, background 0.12s;
-    z-index: 1;
-  }
-  .acct-del:hover { background: var(--red-border); color: var(--red); }
-  .delete-mode .acct-del { opacity: 1; pointer-events: auto; }
-
-  .acct-edit-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    background: var(--neutral-200);
-    border: 1px solid var(--border-strong);
-    transition: background 0.12s, color 0.12s;
-  }
-  .acct-edit-toggle:hover { background: var(--neutral-300); color: var(--text); }
-  .acct-edit-toggle.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-
-  .account-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 4px 0 18px;
-    gap: 10px;
-  }
-  .login-sub-inline { margin: 0; flex: 1; text-align: center; }
-  .back-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    color: var(--muted);
-    font-size: 22px;
-    line-height: 1;
-    flex-shrink: 0;
-    transition: background 0.12s, color 0.12s;
-  }
-  .back-btn:hover { background: var(--neutral-200); color: var(--text); }
-
-  .key {
-    height: 58px;
-    background: var(--neutral-200);
-    border-radius: 14px;
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--text);
-    transition: background 0.12s, transform 0.05s;
-    user-select: none;
-  }
-
-  .key:hover { background: var(--neutral-400); }
-  .key:active { background: var(--neutral-500); transform: scale(0.97); }
-  .key.key-action {
-    background: transparent;
-    font-size: 14px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .key.key-action:hover { background: var(--neutral-300); color: var(--text); }
-  .key.key-enter {
-    background: var(--text);
-    color: var(--card);
-    font-size: 15px;
-    font-weight: 500;
-  }
-  .key.key-enter:hover { background: var(--enter-hover); }
-  .key.key-enter:active { background: var(--enter-hover); transform: scale(0.97); }
-
-  .login-error {
-    min-height: 18px;
-    color: var(--red-strong);
-    font-size: 13px;
-    margin-top: 8px;
-  }
-
-  .login-hint {
-    margin-top: 16px;
-    font-size: 12px;
-    color: var(--muted-soft);
-  }
-
   /* ───────── DASHBOARD ───────── */
   .app {
     max-width: 760px;
@@ -451,44 +142,6 @@
 
   body.blown .status-dot,
   body.passed .status-dot { animation: none; }
-
-  .header-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .pin-badge {
-    font-size: 12px;
-    color: var(--muted);
-    background: var(--neutral-300);
-    padding: 5px 10px;
-    border-radius: 999px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .ghost-btn {
-    font-size: 13px;
-    color: var(--muted);
-    padding: 6px 12px;
-    border-radius: 8px;
-    transition: background 0.12s, color 0.12s;
-  }
-  .ghost-btn:hover { background: var(--neutral-300); color: var(--text); }
-
-  .icon-btn {
-    width: 36px;
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    border-radius: 8px;
-    transition: background 0.12s, color 0.12s;
-  }
-  .icon-btn svg { width: 20px; height: 20px; }
-  .icon-btn:hover { background: var(--neutral-300); color: var(--text); }
-  .icon-btn:active { background: var(--neutral-500); }
 
   /* Hero */
   .hero {
@@ -1128,46 +781,6 @@
   }
   .cal-modal-close:hover { color: var(--text); background: var(--neutral-300); }
 
-  /* Size picker modal */
-  .size-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 24px; }
-  .size-modal.open { display: flex; }
-  .size-modal-card {
-    background: var(--neutral-day);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 28px 24px;
-    width: 100%;
-    max-width: 340px;
-    text-align: center;
-  }
-  .size-modal-title { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
-  .size-modal-sub { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
-  .size-options { display: flex; flex-direction: column; gap: 10px; }
-  .size-option {
-    width: 100%;
-    height: 56px;
-    border-radius: 12px;
-    border: 1px solid var(--border-strong);
-    background: var(--neutral-100);
-    color: var(--text);
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    transition: background 0.12s, border-color 0.12s, transform 0.05s;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 18px;
-    font-variant-numeric: tabular-nums;
-  }
-  .size-option:hover { background: var(--neutral-300); border-color: var(--text); }
-  .size-option:active { transform: scale(0.98); }
-  .size-option-target {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-  }
-
   /* Utility */
   .danger-text { color: var(--red-strong); font-weight: 500; }
   .btn-danger {
@@ -1201,8 +814,6 @@
     .stat-tile-value { font-size: 13px; }
     .trade-row { grid-template-columns: 1fr auto auto; gap: 10px; padding: 14px 0; }
     .trade-row .trade-balance { display: none; }
-    .login-card { padding: 32px 22px 24px; border-radius: 18px; }
-    .key { height: 56px; font-size: 21px; }
     .consistency-wrap { flex-direction: column; align-items: flex-start; gap: 4px; }
     .cal-grid, .cal-weekdays { gap: 4px; }
     .cal-day { padding: 4px; border-radius: 6px; }
@@ -1211,8 +822,6 @@
   }
 
   @media (max-width: 380px) {
-    .keypad { gap: 8px; }
-    .key { height: 52px; font-size: 20px; }
     .metric-value { font-size: 18px; }
     .cal-day-pnl { font-size: 9px; }
   }
@@ -1221,46 +830,10 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="login-screen">
-  <div class="login-card">
-    <h1 class="login-title">Eval Tracker</h1>
-    <div id="view-profile">
-      <button type="button" id="profile-edit-toggle" class="profile-edit-toggle" aria-label="Edit profiles">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-        </svg>
-      </button>
-      <p class="login-sub">Choose a profile</p>
-      <div class="profile-grid profile-grid-2" id="profile-grid"></div>
-    </div>
-    <div id="view-account" hidden>
-      <div class="account-header">
-        <button type="button" class="back-btn" id="back-btn" aria-label="Back">‹</button>
-        <p class="login-sub login-sub-inline">Choose an account</p>
-        <button type="button" class="acct-edit-toggle" id="account-edit-toggle" aria-label="Edit accounts">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-          </svg>
-        </button>
-      </div>
-      <div class="profile-grid" id="account-grid"></div>
-    </div>
-    <p class="login-error" id="login-error">&nbsp;</p>
-  </div>
-</div>
-
 <!-- DASHBOARD -->
-<div id="dashboard" class="app" hidden>
+<div id="dashboard" class="app">
   <header class="app-header">
     <h1><span class="status-dot" id="status-dot" aria-hidden="true"></span>Eval Tracker</h1>
-    <div class="header-actions">
-      <button class="icon-btn" id="logout-btn" aria-label="Back to accounts" title="Back to accounts">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M15 6l-6 6 6 6" />
-        </svg>
-      </button>
-    </div>
   </header>
 
   <main>
@@ -1435,21 +1008,15 @@
       </div>
     </div>
 
-  </main>
-</div>
-
-<!-- Size picker modal -->
-<div class="size-modal" id="size-modal" role="dialog" aria-modal="true" aria-labelledby="size-modal-title">
-  <div class="size-modal-card">
-    <p class="size-modal-title" id="size-modal-title">New Account</p>
-    <p class="size-modal-sub">Choose an account size</p>
-    <div class="size-options" id="size-options">
-      <button type="button" class="size-option" data-size="50000"><span>$50,000</span><span class="size-option-target">$3,000 target</span></button>
-      <button type="button" class="size-option" data-size="100000"><span>$100,000</span><span class="size-option-target">$6,000 target</span></button>
-      <button type="button" class="size-option" data-size="150000"><span>$150,000</span><span class="size-option-target">$9,000 target</span></button>
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">Reset account</div>
+        <div class="muted" style="font-size:13px;">Clears all trades and puts the balance back to $50,000.</div>
+      </div>
+      <button class="btn-danger" id="reset-btn">Reset</button>
     </div>
-    <button class="cal-modal-close" id="size-modal-cancel" type="button">Cancel</button>
-  </div>
+
+  </main>
 </div>
 
 <script>
@@ -1468,14 +1035,17 @@
     headers.set("Pragma", "no-cache");
     return fetch(url, { ...opts, headers, cache: "no-store" });
   };
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-    global: { fetch: noCacheFetch },
-  });
+  // The Supabase client may be unavailable (CDN offline) — the app falls back
+  // to localStorage for all reads/writes in that case.
+  const sb = window.supabase
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false },
+        global: { fetch: noCacheFetch },
+      })
+    : null;
   const TABLE = "eval_tracker_accounts";
-  const SEED_PINS = ["1111"];
-  const SEED_PINS_B = ["2222"];
-  const SEEDED_PIN = "1111";
+  // Single-account app: everything lives under this one pin.
+  const PIN = "1111";
   const CONSISTENCY_LIMIT = 0.40;
 
   // ───── Account sizes ─────
@@ -1513,44 +1083,85 @@
   ];
 
   // ───── State ─────
-  let currentPin = null;
   let calMonth = (() => { const d = new Date(); d.setDate(1); return d; })();
 
-  // ───── Storage helpers (Supabase) ─────
+  // ───── Storage helpers (Supabase with localStorage fallback) ─────
+  // Supabase is tried first so data still syncs across devices when the
+  // backend is reachable; every read/write also mirrors to localStorage so
+  // the app keeps working when it isn't.
+  const LS_KEY = "evaltracker_" + PIN;
+
+  function loadLocal() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.trades)) return null;
+      const cfg = sizeForPin(PIN);
+      return { trades: parsed.trades, peakBalance: Number(parsed.peakBalance) || cfg.starting };
+    } catch { return null; }
+  }
+
+  function saveLocal(data) {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ trades: data.trades, peakBalance: data.peakBalance }));
+    } catch {}
+  }
+
+  // Once a Supabase request fails (backend unreachable), skip it for the rest
+  // of the session so the UI doesn't stall on every action.
+  let sbDown = false;
+
   async function loadData(pin) {
-    const { data, error } = await sb
-      .from(TABLE)
-      .select("trades, peak_balance")
-      .eq("pin", pin)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data || isDeleted(data.trades)) return null;
-    const cfg = sizeForPin(pin);
-    return { trades: data.trades || [], peakBalance: Number(data.peak_balance) || cfg.starting };
+    if (sb && !sbDown) {
+      try {
+        const { data, error } = await sb
+          .from(TABLE)
+          .select("trades, peak_balance")
+          .eq("pin", pin)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return loadLocal();
+        const cfg = sizeForPin(pin);
+        const result = { trades: data.trades || [], peakBalance: Number(data.peak_balance) || cfg.starting };
+        saveLocal(result);
+        return result;
+      } catch (err) {
+        sbDown = true;
+        console.warn("Supabase load failed; using local data", err);
+      }
+    }
+    return loadLocal();
   }
 
   async function saveData(pin, data) {
     const cfg = sizeForPin(pin);
-    const peakToStore = computeState(data.trades, cfg).peak;
-    const { error } = await sb
-      .from(TABLE)
-      .upsert(
-        {
-          pin,
-          trades: data.trades,
-          peak_balance: peakToStore,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "pin" }
-      );
-    if (error) throw error;
-    data.peakBalance = peakToStore;
+    data.peakBalance = computeState(data.trades, cfg).peak;
+    saveLocal(data);
+    if (!sb || sbDown) return;
+    try {
+      const { error } = await sb
+        .from(TABLE)
+        .upsert(
+          {
+            pin,
+            trades: data.trades,
+            peak_balance: data.peakBalance,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "pin" }
+        );
+      if (error) throw error;
+    } catch (err) {
+      sbDown = true;
+      console.warn("Supabase sync failed; saved locally", err);
+    }
   }
 
   async function createAccount(pin) {
     const cfg = sizeForPin(pin);
     const data = {
-      trades: pin === SEEDED_PIN ? [...SEED_TRADES] : [],
+      trades: [...SEED_TRADES],
       peakBalance: cfg.starting,
     };
     await saveData(pin, data);
@@ -1670,447 +1281,17 @@
     return `${y}-${m}-${day}`;
   }
 
-  // ───── Login flow ─────
-  const loginEl = document.getElementById("login");
-  const dashEl = document.getElementById("dashboard");
-  const loginError = document.getElementById("login-error");
-
-  function resetPinInput(msg = "") {
-    loginError.textContent = msg || "\u00A0";
+  // ───── Boot ─────
+  async function initDashboard() {
+    let data = await loadData(PIN);
+    if (!data) data = await createAccount(PIN);
+    document.getElementById("trade-date").value = todayIso();
+    await render();
   }
-
-  // Supabase RLS blocks DELETE for the anon role (returns 200 but affects 0
-  // rows), so we soft-delete by upserting a sentinel marker into the row.
-  // loadAllPins filters these out so they're hidden across all devices.
-  const DELETED_SENTINEL = { __deleted: true };
-  function isDeleted(trades) {
-    return Array.isArray(trades) && trades.length === 1 && trades[0] && trades[0].__deleted === true;
-  }
-  async function deleteAccount(pin) {
-    const { error } = await sb
-      .from(TABLE)
-      .upsert(
-        {
-          pin,
-          trades: [DELETED_SENTINEL],
-          peak_balance: ACCOUNT_SIZES[DEFAULT_SIZE].starting,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "pin" }
-      );
-    if (error) throw error;
-  }
-
-  let currentProfile = null; // profile id string
-
-  // ───── Profiles (stored in Supabase as sentinel rows) ─────
-  // A profile is persisted as a normal table row whose pin is
-  // "__profile__<id>" and whose trades column holds [{__profile__:true, name}].
-  // This syncs across devices without needing a separate table.
-  const PROFILE_PIN_PREFIX = "__profile__";
-  let profiles = []; // [{id, name}]
-  let profileEditMode = false;
-
-  function isProfileRow(pin) {
-    return typeof pin === "string" && pin.startsWith(PROFILE_PIN_PREFIX);
-  }
-
-  async function loadProfiles() {
-    const { data, error } = await sb
-      .from(TABLE)
-      .select("pin, trades, created_at")
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    return (data || [])
-      .filter(r => isProfileRow(r.pin) && !isDeleted(r.trades))
-      .map(r => {
-        const meta = Array.isArray(r.trades) ? r.trades[0] : null;
-        return {
-          id: r.pin.slice(PROFILE_PIN_PREFIX.length),
-          name: meta && typeof meta.name === "string" ? meta.name : "?",
-        };
-      });
-  }
-
-  async function saveProfile(id, name) {
-    const { error } = await sb
-      .from(TABLE)
-      .upsert(
-        {
-          pin: PROFILE_PIN_PREFIX + id,
-          trades: [{ __profile__: true, name }],
-          peak_balance: ACCOUNT_SIZES[DEFAULT_SIZE].starting,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "pin" }
-      );
-    if (error) throw error;
-  }
-
-  async function deleteProfile(id) {
-    // Soft-delete the profile row and every account that belongs to it.
-    await deleteAccount(PROFILE_PIN_PREFIX + id);
-    const all = await loadAllPins();
-    for (const pin of all.filter(p => profileOf(p) === id)) {
-      await deleteAccount(pin);
-    }
-  }
-
-  function avatarLetter(name) {
-    return (String(name || "").trim()[0] || "?").toUpperCase();
-  }
-
-  function profileOf(pin) {
-    for (const p of profiles) {
-      if (pin === p.id || pin.startsWith(p.id + "-")) return p.id;
-    }
-    if (pin.startsWith("b-") || SEED_PINS_B.includes(pin)) return "b";
-    return "a";
-  }
-
-  function newPinForProfile(profile, size = DEFAULT_SIZE) {
-    const cfg = ACCOUNT_SIZES[size] || ACCOUNT_SIZES[DEFAULT_SIZE];
-    return profile + "-" + cfg.label + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  }
-
-  async function loadAllPins() {
-    try {
-      const { data, error } = await sb
-        .from(TABLE)
-        .select("pin, created_at, trades")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data || [])
-        .filter(r => !isDeleted(r.trades) && !isProfileRow(r.pin))
-        .map(r => r.pin);
-    } catch (err) {
-      console.error(err);
-      return SEED_PINS.slice();
-    }
-  }
-
-  function pinsForProfile(profile, allPins) {
-    const filtered = allPins.filter(p => profileOf(p) === profile);
-    const seeds = profile === "a" ? SEED_PINS : profile === "b" ? SEED_PINS_B : [];
-    const seeded = seeds.filter(p => filtered.includes(p));
-    const rest = filtered.filter(p => !seeds.includes(p));
-    return [...seeded, ...rest];
-  }
-
-  let deleteMode = false;
-
-  function setDeleteMode(on) {
-    deleteMode = on;
-    const grid = document.getElementById("account-grid");
-    if (grid) grid.classList.toggle("delete-mode", on);
-    const toggle = document.getElementById("account-edit-toggle");
-    if (toggle) toggle.classList.toggle("active", on);
-  }
-
-  async function renderAccountGrid() {
-    const grid = document.getElementById("account-grid");
-    grid.innerHTML = `<div class="profile-tile" aria-hidden="true"><div class="account-num" style="font-size:20px;color:var(--muted)">…</div></div>`;
-    let all = await loadAllPins();
-    // Auto-seed Profile A with 1111 (starter trades) on first visit
-    if (currentProfile === "a" && !all.includes(SEEDED_PIN)) {
-      try {
-        await createAccount(SEEDED_PIN);
-        all = await loadAllPins();
-      } catch (err) { console.error(err); }
-    }
-    // Auto-seed Profile B with "2222" (then a dynamic pin) if it has none
-    if (currentProfile === "b" && pinsForProfile("b", all).length === 0) {
-      try {
-        const seedB = SEED_PINS_B[0];
-        if (!all.includes(seedB)) {
-          await createAccount(seedB);
-        } else {
-          const newPin = newPinForProfile("b");
-          await createAccount(newPin);
-        }
-        all = await loadAllPins();
-      } catch (err) { console.error(err); }
-    }
-    // Auto-seed any other profile with one fresh account if it has none
-    if (currentProfile !== "a" && currentProfile !== "b" &&
-        pinsForProfile(currentProfile, all).length === 0) {
-      try {
-        await createAccount(newPinForProfile(currentProfile));
-        all = await loadAllPins();
-      } catch (err) { console.error(err); }
-    }
-    const pins = pinsForProfile(currentProfile, all);
-    // Load all account statuses in parallel
-    const statuses = await Promise.all(pins.map(async pin => {
-      try {
-        const d = await loadData(pin);
-        return d ? computeState(d.trades, sizeForPin(pin)).status : "active";
-      } catch { return "active"; }
-    }));
-    grid.innerHTML = "";
-    pins.forEach((pin, i) => {
-      const status = statuses[i];
-      const statusClass = status === "blown" ? " blown" : status === "passed" ? " passed" : "";
-      const tile = document.createElement("button");
-      tile.type = "button";
-      tile.className = "profile-tile";
-      tile.dataset.pin = pin;
-      const delBtn = `<span role="button" class="acct-del" data-pin="${pin}" data-num="${i + 1}" aria-label="Delete account ${i + 1}">×</span>`;
-      tile.innerHTML = `${delBtn}<div class="account-num${statusClass}">${i + 1}</div>`;
-      grid.appendChild(tile);
-    });
-    // Add-account tile — only shown in edit mode
-    if (deleteMode) {
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "profile-tile profile-add";
-      addBtn.id = "profile-add";
-      addBtn.innerHTML = `<div class="account-num account-num-add">+</div>`;
-      grid.appendChild(addBtn);
-    }
-
-    // Preserve delete mode across re-renders
-    grid.classList.toggle("delete-mode", deleteMode);
-  }
-
-  async function renderProfileGrid() {
-    const grid = document.getElementById("profile-grid");
-    grid.innerHTML = `<div class="profile-tile" aria-hidden="true"><div class="profile-avatar">…</div></div>`;
-    try {
-      profiles = await loadProfiles();
-    } catch (err) {
-      console.error(err);
-      profiles = [];
-    }
-    // Seed the default T / J profiles only on a true first run (no profiles
-    // at all) so that deleting a profile later actually sticks.
-    if (profiles.length === 0) {
-      for (const seed of [{ id: "a", name: "T" }, { id: "b", name: "J" }]) {
-        try {
-          await saveProfile(seed.id, seed.name);
-          profiles.push(seed);
-        } catch (err) { console.error(err); }
-      }
-    }
-    grid.innerHTML = "";
-    profiles.forEach(p => {
-      const tile = document.createElement("button");
-      tile.type = "button";
-      tile.className = "profile-tile";
-      tile.dataset.profile = p.id;
-
-      const av = document.createElement("div");
-      av.className = "profile-avatar";
-      av.textContent = avatarLetter(p.name);
-
-      const label = document.createElement("div");
-      label.className = "profile-label";
-      label.textContent = p.name;
-
-      // Rename + delete buttons — only shown in edit mode
-      if (profileEditMode) {
-        const del = document.createElement("span");
-        del.className = "profile-del";
-        del.setAttribute("role", "button");
-        del.dataset.profile = p.id;
-        del.setAttribute("aria-label", "Delete profile " + p.name);
-        del.textContent = "×";
-
-        const edit = document.createElement("span");
-        edit.className = "profile-edit";
-        edit.setAttribute("role", "button");
-        edit.dataset.profile = p.id;
-        edit.setAttribute("aria-label", "Rename profile " + p.name);
-        edit.textContent = "✎";
-        tile.append(del, edit, av, label);
-      } else {
-        tile.append(av, label);
-      }
-      grid.appendChild(tile);
-    });
-
-    // Add-profile tile — only shown in edit mode
-    if (profileEditMode) {
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "profile-tile profile-add";
-      addBtn.id = "profile-add-tile";
-      addBtn.innerHTML = `<div class="profile-avatar account-num-add">+</div><div class="profile-label">New</div>`;
-      grid.appendChild(addBtn);
-    }
-  }
-
-  // ───── View transitions (with browser-history support) ─────
-  async function showProfileSelect(push = true) {
-    loginEl.hidden = false;
-    dashEl.hidden = true;
-    document.getElementById("view-profile").hidden = false;
-    document.getElementById("view-account").hidden = true;
-    document.body.classList.remove("blown", "passed");
-    currentProfile = null;
-    currentPin = null;
-    resetPinInput();
-    setDeleteMode(false);
-    setProfileEditMode(false);
-    if (push) history.pushState({ view: "profile" }, "", "#");
-    await renderProfileGrid();
-  }
-
-  function setProfileEditMode(on) {
-    profileEditMode = on;
-    const toggle = document.getElementById("profile-edit-toggle");
-    if (toggle) toggle.classList.toggle("active", on);
-  }
-
-  async function showAccountSelect(profile, push = true) {
-    loginEl.hidden = false;
-    dashEl.hidden = true;
-    document.getElementById("view-profile").hidden = true;
-    document.getElementById("view-account").hidden = false;
-    document.body.classList.remove("blown", "passed");
-    currentProfile = profile;
-    currentPin = null;
-    setDeleteMode(false);
-    if (push) history.pushState({ view: "account", profile }, "", "#profile=" + profile);
-    await renderAccountGrid();
-  }
-
-  async function showDashboardFor(pin, push = true) {
-    loginError.textContent = "Connecting…";
-    try {
-      const existing = await loadData(pin);
-      if (!existing) await createAccount(pin);
-      currentPin = pin;
-      currentProfile = profileOf(pin);
-      loginError.textContent = " ";
-      loginEl.hidden = true;
-      dashEl.hidden = false;
-      document.getElementById("trade-date").value = todayIso();
-      await render();
-      if (push) history.pushState({ view: "dashboard", pin }, "", "#account=" + encodeURIComponent(pin));
-    } catch (err) {
-      console.error(err);
-      resetPinInput("Connection error");
-    }
-  }
-
-  // ───── Click wiring ─────
-  document.getElementById("profile-edit-toggle").addEventListener("click", async () => {
-    setProfileEditMode(!profileEditMode);
-    await renderProfileGrid();
-  });
-
-  document.getElementById("account-edit-toggle").addEventListener("click", async () => {
-    setDeleteMode(!deleteMode);
-    await renderAccountGrid();
-  });
-
-  document.getElementById("view-profile").addEventListener("click", async e => {
-    // The corner pencil toggle is handled by its own listener
-    if (e.target.closest("#profile-edit-toggle")) return;
-    // Delete an existing profile (with confirmation)
-    const delBtn = e.target.closest(".profile-del");
-    if (delBtn) {
-      e.stopPropagation();
-      const id = delBtn.dataset.profile;
-      const prof = profiles.find(p => p.id === id);
-      const label = prof ? prof.name : "this profile";
-      if (!confirm(`Are you sure you want to delete "${label}"? This also removes its accounts and cannot be undone.`)) return;
-      try {
-        await deleteProfile(id);
-        await renderProfileGrid();
-      } catch (err) {
-        console.error(err);
-        alert("Failed to delete profile. Check your connection and try again.");
-      }
-      return;
-    }
-    // Rename an existing profile
-    const editBtn = e.target.closest(".profile-edit");
-    if (editBtn) {
-      e.stopPropagation();
-      const id = editBtn.dataset.profile;
-      const prof = profiles.find(p => p.id === id);
-      const name = prompt("Rename profile", prof ? prof.name : "");
-      if (name && name.trim()) {
-        try {
-          await saveProfile(id, name.trim());
-          await renderProfileGrid();
-        } catch (err) {
-          console.error(err);
-          alert("Failed to save. Check your connection and try again.");
-        }
-      }
-      return;
-    }
-    const tile = e.target.closest(".profile-tile");
-    if (!tile) return;
-    // Create a new profile
-    if (tile.id === "profile-add-tile") {
-      const name = prompt("New profile name");
-      if (name && name.trim()) {
-        tile.disabled = true;
-        try {
-          const id = "p-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-          await saveProfile(id, name.trim());
-          await renderProfileGrid();
-        } catch (err) {
-          console.error(err);
-          alert("Failed to create profile. Check your connection and try again.");
-          tile.disabled = false;
-        }
-      }
-      return;
-    }
-    if (tile.dataset.profile) showAccountSelect(tile.dataset.profile);
-  });
-
-  document.getElementById("account-grid").addEventListener("click", async e => {
-    // Delete button (with confirmation)
-    const delBtn = e.target.closest(".acct-del");
-    if (delBtn) {
-      e.stopPropagation();
-      const pin = delBtn.dataset.pin;
-      const num = delBtn.dataset.num;
-      if (!confirm(`Are you sure you want to delete Account ${num}? This cannot be undone.`)) return;
-      const tile = delBtn.closest(".profile-tile");
-      if (tile) tile.remove();
-      try {
-        await deleteAccount(pin);
-        await renderAccountGrid();
-      } catch (err) {
-        console.error(err);
-        resetPinInput("Connection error");
-        await renderAccountGrid();
-      }
-      return;
-    }
-    const tile = e.target.closest(".profile-tile");
-    if (!tile) return;
-    if (tile.id === "profile-add") {
-      openSizeModal();
-      return;
-    }
-    if (tile.dataset.pin) showDashboardFor(tile.dataset.pin);
-  });
-
-  document.getElementById("back-btn").addEventListener("click", () => history.back());
-
-  window.addEventListener("popstate", async e => {
-    const state = e.state || { view: "profile" };
-    if (state.view === "profile") {
-      showProfileSelect(false);
-    } else if (state.view === "account") {
-      await showAccountSelect(state.profile || "a", false);
-    } else if (state.view === "dashboard" && state.pin) {
-      await showDashboardFor(state.pin, false);
-    }
-  });
 
   async function render() {
-    if (!currentPin) return;
-    const cfg = sizeForPin(currentPin);
-    const data = (await loadData(currentPin)) || { trades: [] };
+    const cfg = sizeForPin(PIN);
+    const data = (await loadData(PIN)) || { trades: [] };
     const s = computeState(data.trades, cfg);
 
     // Rules card — reflect this account's size
@@ -2376,9 +1557,9 @@
     const submitBtn = e.target.querySelector("button[type=submit]");
     submitBtn.disabled = true;
     try {
-      const data = (await loadData(currentPin)) || { trades: [] };
+      const data = (await loadData(PIN)) || { trades: [] };
       data.trades.push({ date, pnl, result: selectedResult });
-      await saveData(currentPin, data);
+      await saveData(PIN, data);
       document.getElementById("trade-pnl").value = "";
       document.getElementById("trade-date").value = todayIso();
       setSign(false);
@@ -2399,12 +1580,12 @@
     const pnl = Number(pnlStr);
     btn.disabled = true;
     try {
-      const data = await loadData(currentPin);
+      const data = await loadData(PIN);
       if (!data) return;
       const idx = data.trades.findIndex(t => t.date === date && Math.abs(t.pnl - pnl) < 1e-9);
       if (idx === -1) return;
       data.trades.splice(idx, 1);
-      await saveData(currentPin, data);
+      await saveData(PIN, data);
       await render();
     } catch (err) {
       console.error(err);
@@ -2444,39 +1625,13 @@
   calModal.addEventListener("click", e => { if (e.target === calModal) closeCalModal(); });
   document.getElementById("cal-modal-close").addEventListener("click", closeCalModal);
 
-  // ───── Size picker (used when creating a new account) ─────
-  const sizeModal = document.getElementById("size-modal");
-  function openSizeModal() { sizeModal.classList.add("open"); }
-  function closeSizeModal() { sizeModal.classList.remove("open"); }
-  sizeModal.addEventListener("click", e => { if (e.target === sizeModal) closeSizeModal(); });
-  document.getElementById("size-modal-cancel").addEventListener("click", closeSizeModal);
-  document.getElementById("size-options").addEventListener("click", async e => {
-    const btn = e.target.closest("button[data-size]");
-    if (!btn) return;
-    const size = Number(btn.dataset.size);
-    btn.disabled = true;
-    try {
-      const pin = newPinForProfile(currentProfile, size);
-      await createAccount(pin);
-      closeSizeModal();
-      await renderAccountGrid();
-    } catch (err) {
-      console.error(err);
-      resetPinInput("Connection error");
-    } finally {
-      btn.disabled = false;
-    }
+  document.getElementById("reset-btn").addEventListener("click", async () => {
+    if (!confirm("Reset this account? All trades will be cleared and the balance goes back to $50,000.")) return;
+    await saveData(PIN, { trades: [] });
+    await render();
   });
 
-  document.getElementById("logout-btn").addEventListener("click", () => history.back());
-
-  // ───── Boot ─────
-  // One-time cleanup of stale per-device soft-delete list so previously
-  // hidden pins reappear and stay in sync via the DB.
-  try { localStorage.removeItem("_del_pins"); } catch {}
-  resetPinInput();
-  history.replaceState({ view: "profile" }, "", "#");
-  showProfileSelect(false);
+  initDashboard();
 })();
 </script>
 
