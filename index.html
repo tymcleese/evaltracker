@@ -1038,6 +1038,22 @@
 (() => {
   "use strict";
 
+  // NOTE: this Supabase project no longer exists (deleted after a free-tier
+  // pause), so cross-device sync is currently off — the app runs fully from
+  // on-device storage. To restore sync: create a new free project at
+  // supabase.com, run the SQL below in its SQL Editor, then replace
+  // SUPABASE_URL and SUPABASE_ANON_KEY with the new project's values
+  // (Project Settings → API). No other changes needed.
+  //
+  //   create table eval_tracker_accounts (
+  //     pin text primary key,
+  //     trades jsonb,
+  //     peak_balance numeric,
+  //     updated_at timestamptz
+  //   );
+  //   alter table eval_tracker_accounts enable row level security;
+  //   create policy "anon read/write" on eval_tracker_accounts
+  //     for all to anon using (true) with check (true);
   const SUPABASE_URL = "https://bfcdcgvbafbfowsiknrd.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmY2RjZ3ZiYWZiZm93c2lrbnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzIwMjcsImV4cCI6MjA5MjcwODAyN30.5hPuFIVLgmYjP3bpUKnuInLUMZXFX_o9j_m6Mu2iuRk";
   // No-cache fetch wrapper: ensures every Supabase request bypasses the HTTP
@@ -1108,11 +1124,14 @@
 
   // ───── State ─────
   let calMonth = (() => { const d = new Date(); d.setDate(1); return d; })();
+  // In-memory source of truth: { trades, peakBalance, updatedAt }.
+  // The UI only ever reads this — rendering never waits on the network.
+  let db = null;
 
-  // ───── Storage helpers (Supabase with localStorage fallback) ─────
-  // Supabase is tried first so data still syncs across devices when the
-  // backend is reachable; every read/write also mirrors to localStorage so
-  // the app keeps working when it isn't.
+  // ───── Storage (local-first, Supabase syncs in the background) ─────
+  // localStorage is authoritative for instant loads; every change is pushed
+  // to Supabase fire-and-forget, and a background pull on boot adopts the
+  // remote copy only when it is newer (last write wins across devices).
   const LS_KEY = "evaltracker_" + PIN;
 
   function loadLocal() {
@@ -1121,75 +1140,93 @@
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.trades)) return null;
-      const cfg = currentCfg();
-      return { trades: parsed.trades, peakBalance: Number(parsed.peakBalance) || cfg.starting };
+      return {
+        trades: parsed.trades,
+        peakBalance: Number(parsed.peakBalance) || currentCfg().starting,
+        updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : "",
+      };
     } catch { return null; }
   }
 
-  function saveLocal(data) {
+  function saveLocal() {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ trades: data.trades, peakBalance: data.peakBalance }));
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        trades: db.trades,
+        peakBalance: db.peakBalance,
+        updatedAt: db.updatedAt,
+      }));
     } catch {}
   }
 
+  // Persist a local change: recompute the peak, write localStorage
+  // synchronously, then sync to Supabase without blocking the UI.
+  function persist() {
+    db.peakBalance = computeState(db.trades, currentCfg()).peak;
+    db.updatedAt = new Date().toISOString();
+    saveLocal();
+    pushRemote();
+  }
+
   // Once a Supabase request fails (backend unreachable), skip it for the rest
-  // of the session so the UI doesn't stall on every action.
+  // of the session so we don't keep hitting a dead host.
   let sbDown = false;
 
-  async function loadData(pin) {
-    if (sb && !sbDown) {
-      try {
-        const { data, error } = await sb
-          .from(TABLE)
-          .select("trades, peak_balance")
-          .eq("pin", pin)
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) return loadLocal();
-        const cfg = currentCfg();
-        const result = { trades: data.trades || [], peakBalance: Number(data.peak_balance) || cfg.starting };
-        saveLocal(result);
-        return result;
-      } catch (err) {
+  // The account size rides along inside the jsonb payload (the table has no
+  // size column): { size, trades }. Legacy rows are a bare trades array.
+  function pushRemote() {
+    if (!sb || sbDown) return;
+    sb.from(TABLE)
+      .upsert(
+        {
+          pin: PIN,
+          trades: { size: currentSize, trades: db.trades },
+          peak_balance: db.peakBalance,
+          updated_at: db.updatedAt || new Date().toISOString(),
+        },
+        { onConflict: "pin" }
+      )
+      .then(({ error }) => { if (error) throw error; })
+      .catch(err => {
         sbDown = true;
-        console.warn("Supabase load failed; using local data", err);
-      }
-    }
-    return loadLocal();
+        console.warn("Supabase sync failed; data is saved on this device", err);
+      });
   }
 
-  async function saveData(pin, data) {
-    const cfg = currentCfg();
-    data.peakBalance = computeState(data.trades, cfg).peak;
-    saveLocal(data);
+  async function syncFromRemote() {
     if (!sb || sbDown) return;
     try {
-      const { error } = await sb
+      const { data, error } = await sb
         .from(TABLE)
-        .upsert(
-          {
-            pin,
-            trades: data.trades,
-            peak_balance: data.peakBalance,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "pin" }
-        );
+        .select("trades, peak_balance, updated_at")
+        .eq("pin", PIN)
+        .maybeSingle();
       if (error) throw error;
+      if (!data) { pushRemote(); return; } // first device online: publish local state
+      let remoteTrades = data.trades;
+      let remoteSize = null;
+      if (remoteTrades && !Array.isArray(remoteTrades)) {
+        remoteSize = Number(remoteTrades.size);
+        remoteTrades = remoteTrades.trades;
+      }
+      if (!Array.isArray(remoteTrades)) return;
+      const remoteAt = Date.parse(data.updated_at) || 0;
+      const localAt = Date.parse(db && db.updatedAt) || 0;
+      if (remoteAt > localAt) {
+        if (ACCOUNT_SIZES[remoteSize]) setSize(remoteSize);
+        db = {
+          trades: remoteTrades,
+          peakBalance: Number(data.peak_balance) || currentCfg().starting,
+          updatedAt: new Date(remoteAt).toISOString(),
+        };
+        saveLocal();
+        render();
+      } else if (localAt > remoteAt) {
+        pushRemote(); // this device has newer (e.g. offline) changes
+      }
     } catch (err) {
       sbDown = true;
-      console.warn("Supabase sync failed; saved locally", err);
+      console.warn("Supabase unreachable; running on local data", err);
     }
-  }
-
-  async function createAccount(pin) {
-    const cfg = currentCfg();
-    const data = {
-      trades: [...SEED_TRADES],
-      peakBalance: cfg.starting,
-    };
-    await saveData(pin, data);
-    return data;
   }
 
   // ───── Domain logic ─────
@@ -1306,17 +1343,24 @@
   }
 
   // ───── Boot ─────
-  async function initDashboard() {
-    let data = await loadData(PIN);
-    if (!data) data = await createAccount(PIN);
+  function initDashboard() {
+    db = loadLocal();
+    if (!db) {
+      // True first run on this device: seed the starter history. No remote
+      // push and updatedAt stays empty, so if the backend already has data
+      // for another device it wins on the background sync below.
+      db = { trades: [...SEED_TRADES], peakBalance: currentCfg().starting, updatedAt: "" };
+      db.peakBalance = computeState(db.trades, currentCfg()).peak;
+      saveLocal();
+    }
     document.getElementById("trade-date").value = todayIso();
-    await render();
+    render();
+    syncFromRemote();
   }
 
-  async function render() {
+  function render() {
     const cfg = currentCfg();
-    const data = (await loadData(PIN)) || { trades: [] };
-    const s = computeState(data.trades, cfg);
+    const s = computeState(db.trades, cfg);
 
     // Rules card — reflect this account's size
     document.getElementById("rules-title").textContent = `Tradify Select ${cfg.label} Eval`;
@@ -1442,11 +1486,11 @@
       s.worstDay ? fmtMoney(Math.abs(s.worstDay.pnl)) : "—";
 
     // Calendar
-    renderCalendar(data.trades);
+    renderCalendar(db.trades);
 
     // Trade history
     const list = document.getElementById("trade-list");
-    const count = data.trades.length;
+    const count = db.trades.length;
     document.getElementById("trade-count").textContent = `${count} day${count === 1 ? "" : "s"}`;
 
     if (count === 0) {
@@ -1572,7 +1616,7 @@
     setResult(btn.dataset.result);
   });
 
-  document.getElementById("trade-form").addEventListener("submit", async e => {
+  document.getElementById("trade-form").addEventListener("submit", e => {
     e.preventDefault();
     const date = document.getElementById("trade-date").value;
     const pnlStr = document.getElementById("trade-pnl").value;
@@ -1581,44 +1625,25 @@
     if (!Number.isFinite(magnitude)) return;
     const pnl = signNegative ? -magnitude : magnitude;
 
-    const submitBtn = e.target.querySelector("button[type=submit]");
-    submitBtn.disabled = true;
-    try {
-      const data = (await loadData(PIN)) || { trades: [] };
-      data.trades.push({ date, pnl, result: selectedResult });
-      await saveData(PIN, data);
-      document.getElementById("trade-pnl").value = "";
-      document.getElementById("trade-date").value = todayIso();
-      setSign(false);
-      setResult("W");
-      await render();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save trade. Check your connection and try again.");
-    } finally {
-      submitBtn.disabled = false;
-    }
+    db.trades.push({ date, pnl, result: selectedResult });
+    persist();
+    document.getElementById("trade-pnl").value = "";
+    document.getElementById("trade-date").value = todayIso();
+    setSign(false);
+    setResult("W");
+    render();
   });
 
-  document.getElementById("trade-list").addEventListener("click", async e => {
+  document.getElementById("trade-list").addEventListener("click", e => {
     const btn = e.target.closest("[data-del]");
     if (!btn) return;
     const [date, pnlStr] = btn.dataset.del.split("|");
     const pnl = Number(pnlStr);
-    btn.disabled = true;
-    try {
-      const data = await loadData(PIN);
-      if (!data) return;
-      const idx = data.trades.findIndex(t => t.date === date && Math.abs(t.pnl - pnl) < 1e-9);
-      if (idx === -1) return;
-      data.trades.splice(idx, 1);
-      await saveData(PIN, data);
-      await render();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete trade. Check your connection and try again.");
-      btn.disabled = false;
-    }
+    const idx = db.trades.findIndex(t => t.date === date && Math.abs(t.pnl - pnl) < 1e-9);
+    if (idx === -1) return;
+    db.trades.splice(idx, 1);
+    persist();
+    render();
   });
 
   document.getElementById("cal-prev").addEventListener("click", () => {
@@ -1652,15 +1677,16 @@
   calModal.addEventListener("click", e => { if (e.target === calModal) closeCalModal(); });
   document.getElementById("cal-modal-close").addEventListener("click", closeCalModal);
 
-  document.getElementById("reset-options").addEventListener("click", async e => {
+  document.getElementById("reset-options").addEventListener("click", e => {
     const btn = e.target.closest("button[data-size]");
     if (!btn) return;
     const size = Number(btn.dataset.size);
     const label = (ACCOUNT_SIZES[size] || ACCOUNT_SIZES[DEFAULT_SIZE]).label;
     if (!confirm(`Reset into a ${label} account? All trades will be cleared. This cannot be undone.`)) return;
     setSize(size);
-    await saveData(PIN, { trades: [] });
-    await render();
+    db = { trades: [], peakBalance: currentCfg().starting, updatedAt: "" };
+    persist();
+    render();
   });
 
   initDashboard();
