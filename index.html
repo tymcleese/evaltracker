@@ -781,15 +781,26 @@
   }
   .cal-modal-close:hover { color: var(--text); background: var(--neutral-300); }
 
-  /* Utility */
-  .danger-text { color: var(--red-strong); font-weight: 500; }
-  .btn-danger {
-    font-size: 12px;
-    color: var(--muted);
-    padding: 4px 10px;
-    border-radius: 6px;
+  /* Reset options */
+  .reset-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
   }
-  .btn-danger:hover { color: var(--red); background: var(--neutral-300); }
+  .reset-option {
+    height: 48px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--neutral-100);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    transition: background 0.12s, border-color 0.12s, transform 0.05s;
+  }
+  .reset-option:hover { background: var(--neutral-300); border-color: var(--text); }
+  .reset-option:active { transform: scale(0.97); }
+  .reset-option.active { background: var(--text); color: var(--card); border-color: var(--text); }
 
   @media (max-width: 520px) {
     .app { padding-left: 14px; padding-right: 14px; }
@@ -1008,12 +1019,16 @@
       </div>
     </div>
 
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">Reset account</div>
-        <div class="muted" style="font-size:13px;">Clears all trades and puts the balance back to $50,000.</div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Reset Account</h2>
       </div>
-      <button class="btn-danger" id="reset-btn">Reset</button>
+      <p class="muted" style="font-size:13px;margin:0 0 14px;">Clears all trades and starts over in the chosen account size.</p>
+      <div class="reset-options" id="reset-options">
+        <button type="button" class="reset-option" data-size="50000">50k</button>
+        <button type="button" class="reset-option" data-size="100000">100k</button>
+        <button type="button" class="reset-option" data-size="150000">150k</button>
+      </div>
     </div>
 
   </main>
@@ -1057,13 +1072,20 @@
     150000: { size: 150000, label: "150k", starting: 150000, target: 9000, drawdown: 4500, minis: 12, micros: 120 },
   };
   const DEFAULT_SIZE = 50000;
-  // Pin format for new accounts: "<profile>-<sizeLabel>-<rand>", e.g. "a-100k-xyz123".
-  // Legacy pins (1111, 2222, "<profile>-<rand>") default to 50k.
-  function sizeForPin(pin) {
-    const m = String(pin || "").match(/(?:^|-)(50|100|150)k(?:-|$)/);
-    const size = m ? Number(m[1]) * 1000 : DEFAULT_SIZE;
-    return ACCOUNT_SIZES[size] || ACCOUNT_SIZES[DEFAULT_SIZE];
+  // Selected account size persists on-device so a reset into 100k/150k
+  // survives reloads (the remote row has no size column).
+  const LS_SIZE_KEY = "evaltracker_size";
+  let currentSize = (() => {
+    try {
+      const n = Number(localStorage.getItem(LS_SIZE_KEY));
+      return ACCOUNT_SIZES[n] ? n : DEFAULT_SIZE;
+    } catch { return DEFAULT_SIZE; }
+  })();
+  function setSize(n) {
+    currentSize = ACCOUNT_SIZES[n] ? n : DEFAULT_SIZE;
+    try { localStorage.setItem(LS_SIZE_KEY, String(currentSize)); } catch {}
   }
+  const currentCfg = () => ACCOUNT_SIZES[currentSize];
 
   // Starter trade data (seeded for the first PIN only)
   const SEED_TRADES = [
@@ -1099,7 +1121,7 @@
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.trades)) return null;
-      const cfg = sizeForPin(PIN);
+      const cfg = currentCfg();
       return { trades: parsed.trades, peakBalance: Number(parsed.peakBalance) || cfg.starting };
     } catch { return null; }
   }
@@ -1124,7 +1146,7 @@
           .maybeSingle();
         if (error) throw error;
         if (!data) return loadLocal();
-        const cfg = sizeForPin(pin);
+        const cfg = currentCfg();
         const result = { trades: data.trades || [], peakBalance: Number(data.peak_balance) || cfg.starting };
         saveLocal(result);
         return result;
@@ -1137,7 +1159,7 @@
   }
 
   async function saveData(pin, data) {
-    const cfg = sizeForPin(pin);
+    const cfg = currentCfg();
     data.peakBalance = computeState(data.trades, cfg).peak;
     saveLocal(data);
     if (!sb || sbDown) return;
@@ -1161,7 +1183,7 @@
   }
 
   async function createAccount(pin) {
-    const cfg = sizeForPin(pin);
+    const cfg = currentCfg();
     const data = {
       trades: [...SEED_TRADES],
       peakBalance: cfg.starting,
@@ -1292,12 +1314,15 @@
   }
 
   async function render() {
-    const cfg = sizeForPin(PIN);
+    const cfg = currentCfg();
     const data = (await loadData(PIN)) || { trades: [] };
     const s = computeState(data.trades, cfg);
 
     // Rules card — reflect this account's size
     document.getElementById("rules-title").textContent = `Tradify Select ${cfg.label} Eval`;
+    document.querySelectorAll("#reset-options button[data-size]").forEach(b => {
+      b.classList.toggle("active", Number(b.dataset.size) === currentSize);
+    });
     document.getElementById("rule-target").textContent = fmtMoney(cfg.target).replace(".00", "");
     document.getElementById("rule-eod").textContent = fmtMoney(cfg.drawdown).replace(".00", "");
     document.getElementById("rule-trail").textContent = fmtMoney(cfg.drawdown).replace(".00", "");
@@ -1627,8 +1652,13 @@
   calModal.addEventListener("click", e => { if (e.target === calModal) closeCalModal(); });
   document.getElementById("cal-modal-close").addEventListener("click", closeCalModal);
 
-  document.getElementById("reset-btn").addEventListener("click", async () => {
-    if (!confirm("Reset this account? All trades will be cleared and the balance goes back to $50,000.")) return;
+  document.getElementById("reset-options").addEventListener("click", async e => {
+    const btn = e.target.closest("button[data-size]");
+    if (!btn) return;
+    const size = Number(btn.dataset.size);
+    const label = (ACCOUNT_SIZES[size] || ACCOUNT_SIZES[DEFAULT_SIZE]).label;
+    if (!confirm(`Reset into a ${label} account? All trades will be cleared. This cannot be undone.`)) return;
+    setSize(size);
     await saveData(PIN, { trades: [] });
     await render();
   });
