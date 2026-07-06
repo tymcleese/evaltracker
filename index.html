@@ -1028,12 +1028,14 @@
   // No-cache fetch wrapper: ensures every Supabase request bypasses the HTTP
   // cache so reads on any device always reflect the latest DB state. Headers
   // only — do NOT add query params here (PostgREST treats unknown params as
-  // column filters and rejects them).
+  // column filters and rejects them). Every request is also bounded by a 4s
+  // timeout: supabase-js can hang indefinitely on an unreachable host, which
+  // would otherwise stall the first render.
   const noCacheFetch = (url, opts = {}) => {
     const headers = new Headers(opts.headers || {});
     headers.set("Cache-Control", "no-cache");
     headers.set("Pragma", "no-cache");
-    return fetch(url, { ...opts, headers, cache: "no-store" });
+    return fetch(url, { ...opts, headers, cache: "no-store", signal: AbortSignal.timeout(4000) });
   };
   // The Supabase client may be unavailable (CDN offline) — the app falls back
   // to localStorage for all reads/writes in that case.
